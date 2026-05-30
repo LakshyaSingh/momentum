@@ -1,0 +1,109 @@
+// Momentum — premium job application tracker
+// See plan: liquid-glass UI, streak/habit engine, Steve Jobs motivation overlay.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// User row mirrors Supabase auth.users.id; we upsert on first sign-in.
+model User {
+  id           String        @id
+  email        String        @unique
+  name         String?
+  image        String?
+  dailyGoal    Int           @default(5)
+  timezone     String        @default("UTC")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  applications Application[]
+  tags         Tag[]
+
+  @@map("users")
+}
+
+model Application {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  company          String
+  companyDomain    String?
+  role             String
+  location         String?
+  jobLink          String?
+  applicationDate  DateTime
+  status           ApplicationStatus @default(APPLIED)
+  salary           String?
+  recruiter        String?
+  referral         String?
+  notes            String?
+  followUpDate     DateTime?
+  responseReceived Boolean           @default(false)
+  interviewStage   String?
+  offerStatus      String?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  events           StatusEvent[]
+  tags             ApplicationTag[]
+
+  @@index([userId, applicationDate])
+  @@index([userId, status])
+  @@map("applications")
+}
+
+/// Each row is a status transition; powers the funnel and history timeline.
+model StatusEvent {
+  id            String            @id @default(cuid())
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  status        ApplicationStatus
+  occurredAt    DateTime          @default(now())
+  note          String?
+
+  @@index([applicationId, occurredAt])
+  @@map("status_events")
+}
+
+model Tag {
+  id     String           @id @default(cuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  color  String           @default("#a3a3a3")
+  apps   ApplicationTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model ApplicationTag {
+  applicationId String
+  tagId         String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, tagId])
+  @@map("application_tags")
+}
+
+enum ApplicationStatus {
+  APPLIED
+  OA
+  RECRUITER_SCREEN
+  INTERVIEW
+  FINAL_ROUND
+  OFFER
+  REJECTED
+  GHOSTED
+  WITHDRAWN
+}

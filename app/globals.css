@@ -1,0 +1,524 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 1rem;
+
+    /* Light — warm Apple white */
+    --background: 0 0% 99%;
+    --foreground: 240 10% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 8%;
+
+    --primary: 240 10% 8%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 8%;
+
+    --muted: 240 5% 95%;
+    --muted-foreground: 240 4% 42%;
+
+    --accent: 240 5% 95%;
+    --accent-foreground: 240 10% 8%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 240 10% 8%;
+
+    /* Status spectrum — Apple-restrained, not enterprise */
+    --status-applied: 215 90% 60%;
+    --status-oa: 250 80% 65%;
+    --status-screen: 200 85% 55%;
+    --status-interview: 280 70% 60%;
+    --status-final: 320 70% 60%;
+    --status-offer: 145 60% 45%;
+    --status-rejected: 0 70% 60%;
+    --status-ghosted: 240 4% 60%;
+    --status-withdrawn: 30 60% 55%;
+
+    /* Ambient bloom colours used by AmbientBackground */
+    --bloom-1: 220 100% 70%;
+    --bloom-2: 280 85% 70%;
+    --bloom-3: 320 70% 62%;
+
+    /* Liquid Glass optical tuning — light material, lensing not frosting */
+    --glass-blur: 14px;
+    --glass-saturate: 180%;
+    --glass-brightness: 1.05;
+    --glass-contrast: 1.05;
+  }
+
+  .dark {
+    /* visionOS — deep translucent black with violet/cyan ambient */
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 12% 7%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 10% 4%;
+
+    --secondary: 240 6% 14%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 6% 14%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 18%;
+    --input: 240 6% 18%;
+    --ring: 0 0% 98%;
+
+    --status-applied: 215 90% 65%;
+    --status-oa: 250 80% 70%;
+    --status-screen: 200 85% 65%;
+    --status-interview: 280 75% 70%;
+    --status-final: 320 75% 70%;
+    --status-offer: 145 65% 55%;
+    --status-rejected: 0 75% 65%;
+    --status-ghosted: 240 4% 55%;
+    --status-withdrawn: 30 65% 60%;
+
+    --bloom-1: 220 100% 60%;
+    --bloom-2: 280 85% 65%;
+    --bloom-3: 320 65% 58%;
+
+    --glass-blur: 18px;
+    --glass-saturate: 220%;
+    --glass-brightness: 1.12;
+    --glass-contrast: 1.06;
+  }
+
+  /* App + auth shells — flat background so glass never samples green body blooms */
+  :has(.app-shell) body,
+  :has(.auth-shell) body {
+    background: hsl(var(--background));
+  }
+
+  /* Signed-in app + auth — pure black (#000), no ambient bloom bleed while scrolling */
+  .dark:has(.app-shell) html,
+  .dark:has(.app-shell) body,
+  .dark:has(.auth-shell) html,
+  .dark:has(.auth-shell) body {
+    background: #000;
+  }
+
+  .dark .app-shell,
+  .dark .auth-shell {
+    --background: 0 0% 0%;
+    --card: 0 0% 0%;
+    --popover: 0 0% 0%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 0%;
+    --muted: 0 0% 0%;
+    --muted-foreground: 0 0% 62%;
+    --accent: 0 0% 0%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    background-color: hsl(var(--background));
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11", "cv02";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    /* base background sits underneath the AmbientBackground component */
+    background:
+      radial-gradient(at 0% 0%, hsl(var(--bloom-1) / 0.06) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsl(var(--bloom-2) / 0.06) 0px, transparent 50%),
+      radial-gradient(at 80% 85%, hsl(var(--bloom-3) / 0.04) 0px, transparent 45%),
+      hsl(var(--background));
+  }
+
+  ::selection {
+    background: hsl(var(--foreground) / 0.15);
+  }
+}
+
+@layer components {
+  /*
+   * Apple Liquid Glass — adaptive material that bends and concentrates light
+   * (lensing) instead of scattering it (frosting). Three layers per Apple's
+   * WWDC25 model: the highlights/specular layer (::before), the material
+   * (backdrop-filter), and the meniscus rim (box-shadow).
+   * See: https://developer.apple.com/documentation/TechnologyOverviews/liquid-glass
+   */
+  .glass,
+  .glass-panel,
+  .glass-nav,
+  .glass-popover {
+    @apply relative isolate overflow-hidden;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness)) contrast(var(--glass-contrast));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness)) contrast(var(--glass-contrast));
+    transition:
+      backdrop-filter 200ms ease,
+      -webkit-backdrop-filter 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  /*
+   * Meniscus rim — light bending around the perimeter. Apple's signature.
+   * Light mode: bright top, dark bottom hairline rim (refraction exit reads
+   * darker on bright backgrounds), stronger ground shadow.
+   * Dark mode: bright top, soft sides, dim bottom; defined further down.
+   */
+  .glass {
+    @apply rounded-2xl border border-black/[0.06] bg-white/55;
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.95),
+      inset 0.5px 0 0 0 rgba(255, 255, 255, 0.35),
+      inset -0.5px 0 0 0 rgba(15, 15, 20, 0.04),
+      inset 0 -0.75px 0 0 rgba(15, 15, 20, 0.05),
+      0 1px 1px rgba(15, 15, 20, 0.04),
+      0 12px 28px -14px rgba(15, 15, 20, 0.18),
+      0 24px 60px -24px rgba(15, 15, 20, 0.18);
+  }
+
+  .glass-panel {
+    @apply rounded-3xl border border-black/[0.06] bg-white/60;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 1),
+      inset 0.5px 0 0 0 rgba(255, 255, 255, 0.4),
+      inset -0.5px 0 0 0 rgba(15, 15, 20, 0.05),
+      inset 0 -1px 0 0 rgba(15, 15, 20, 0.06),
+      0 1px 1px rgba(15, 15, 20, 0.04),
+      0 18px 40px -16px rgba(15, 15, 20, 0.2),
+      0 32px 80px -28px rgba(15, 15, 20, 0.22);
+  }
+
+  .glass-nav {
+    @apply rounded-full border border-black/[0.06] bg-white/55;
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.9),
+      inset 0 -0.5px 0 0 rgba(15, 15, 20, 0.05),
+      0 1px 1px rgba(15, 15, 20, 0.04),
+      0 10px 28px -10px rgba(15, 15, 20, 0.18);
+  }
+
+  /*
+   * Compact glass for menus, popovers, and tooltips. Same meniscus rim as
+   * .glass but tighter highlight gradients so the shine stays on the edges
+   * instead of washing over the whole surface on small panels.
+   */
+  .glass-popover {
+    @apply rounded-2xl border border-black/[0.06] bg-white/55;
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.95),
+      inset 0.5px 0 0 0 rgba(255, 255, 255, 0.35),
+      inset -0.5px 0 0 0 rgba(15, 15, 20, 0.04),
+      inset 0 -0.75px 0 0 rgba(15, 15, 20, 0.05),
+      0 1px 1px rgba(15, 15, 20, 0.04),
+      0 10px 24px -12px rgba(15, 15, 20, 0.16);
+  }
+
+  /*
+   * Highlights layer — Apple's light-source model.
+   * Sized in absolute units so the glint stays a corner detail on large
+   * panels (like the applications table) instead of flooding the surface.
+   *   1) Primary glint upper-left (the implied light source)
+   *   2) Thin top arc band (the meniscus from inside)
+   *   3) Faint refraction exit at lower-right (light passing through)
+   */
+  .glass::before,
+  .glass-panel::before,
+  .glass-nav::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        ellipse 220px 110px at 70px -10px,
+        rgba(255, 255, 255, 0.6),
+        transparent 70%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.2) 0px,
+        transparent 64px
+      ),
+      radial-gradient(
+        ellipse 200px 100px at calc(100% - 60px) calc(100% + 20px),
+        rgba(15, 15, 20, 0.05),
+        transparent 65%
+      );
+    opacity: 0.9;
+    transition: opacity 200ms ease;
+  }
+
+  .glass-popover::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        ellipse 72px 36px at 14px -6px,
+        rgba(255, 255, 255, 0.55),
+        transparent 70%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.16) 0px,
+        transparent 22px
+      ),
+      radial-gradient(
+        ellipse 64px 32px at calc(100% - 14px) calc(100% + 6px),
+        rgba(15, 15, 20, 0.04),
+        transparent 65%
+      );
+    opacity: 0.85;
+  }
+
+  /*
+   * Interactive illumination — Apple: "the material illuminates from within
+   * as a form of feedback." Subtle brightness lift on hover and active.
+   */
+  .glass:hover,
+  .glass-panel:hover,
+  .glass-nav:hover {
+    --glass-brightness: 1.1;
+  }
+
+  .glass:hover::before,
+  .glass-panel:hover::before,
+  .glass-nav:hover::before {
+    opacity: 1;
+  }
+
+  .dark .glass {
+    @apply border-white/[0.12] bg-white/[0.045];
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.18),
+      inset 0.5px 0 0 0 rgba(255, 255, 255, 0.06),
+      inset -0.5px 0 0 0 rgba(255, 255, 255, 0.04),
+      inset 0 -0.5px 0 0 rgba(255, 255, 255, 0.04),
+      0 18px 48px -22px rgba(0, 0, 0, 0.55);
+    --glass-brightness: 1.18;
+  }
+
+  .dark .glass-panel {
+    @apply border-white/[0.13] bg-white/[0.055];
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+      inset 0.5px 0 0 0 rgba(255, 255, 255, 0.06),
+      inset -0.5px 0 0 0 rgba(255, 255, 255, 0.04),
+      inset 0 -0.75px 0 0 rgba(255, 255, 255, 0.05),
+      0 28px 68px -26px rgba(0, 0, 0, 0.65);
+    --glass-brightness: 1.18;
+  }
+
+  .dark .glass-nav {
+    @apply border-white/[0.10] bg-white/[0.045];
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.16),
+      inset 0 -0.5px 0 0 rgba(255, 255, 255, 0.04),
+      0 12px 38px -14px rgba(0, 0, 0, 0.5);
+    --glass-brightness: 1.16;
+  }
+
+  .dark .glass-popover {
+    @apply border-white/[0.12] bg-white/[0.045];
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.18),
+      inset 0.5px 0 0 0 rgba(255, 255, 255, 0.06),
+      inset -0.5px 0 0 0 rgba(255, 255, 255, 0.04),
+      inset 0 -0.5px 0 0 rgba(255, 255, 255, 0.04),
+      0 12px 32px -16px rgba(0, 0, 0, 0.5);
+    --glass-brightness: 1.16;
+  }
+
+  .dark .glass::before,
+  .dark .glass-panel::before,
+  .dark .glass-nav::before {
+    background:
+      radial-gradient(
+        ellipse 220px 110px at 70px -10px,
+        rgba(255, 255, 255, 0.18),
+        transparent 70%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.06) 0px,
+        transparent 64px
+      ),
+      radial-gradient(
+        ellipse 200px 100px at calc(100% - 60px) calc(100% + 20px),
+        rgba(255, 255, 255, 0.05),
+        transparent 65%
+      );
+    opacity: 0.95;
+  }
+
+  .dark .glass-popover::before {
+    background:
+      radial-gradient(
+        ellipse 72px 36px at 14px -6px,
+        rgba(255, 255, 255, 0.16),
+        transparent 70%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.05) 0px,
+        transparent 22px
+      ),
+      radial-gradient(
+        ellipse 64px 32px at calc(100% - 14px) calc(100% + 6px),
+        rgba(255, 255, 255, 0.04),
+        transparent 65%
+      );
+    opacity: 0.9;
+  }
+
+  /*
+   * Clear variant — Apple's second material. Permanently transparent, no
+   * adaptive tinting. Use over media-rich content where dimming is OK.
+   */
+  .glass-clear {
+    @apply relative isolate overflow-hidden rounded-2xl border border-white/30;
+    background: rgba(0, 0, 0, 0.18);
+    -webkit-backdrop-filter: blur(8px) saturate(160%);
+    backdrop-filter: blur(8px) saturate(160%);
+    box-shadow:
+      inset 0 0.75px 0 0 rgba(255, 255, 255, 0.4),
+      inset 0 -0.5px 0 0 rgba(255, 255, 255, 0.08),
+      0 8px 24px -10px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Screenshot / media frames on the marketing site */
+  .liquid-glass-frame {
+    @apply glass-panel overflow-hidden p-0 shadow-[0_50px_120px_-40px_rgba(0,0,0,0.55)];
+  }
+
+  .dark .liquid-glass-frame {
+    @apply shadow-[0_50px_120px_-40px_rgba(0,0,0,0.85)];
+  }
+
+  .glass-bar {
+    @apply relative border-b border-black/[0.06] bg-white/65 dark:border-white/[0.06] dark:bg-white/[0.03];
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness)) contrast(var(--glass-contrast));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness)) contrast(var(--glass-contrast));
+  }
+
+  /*
+   * Scroll Edge Effect — Apple: "as content scrolls underneath, the effect
+   * gently dissolves the content into the background, lifting the glass
+   * visually above the moving content." A soft fade below the floating bar.
+   */
+  .glass-bar::after {
+    content: "";
+    position: absolute;
+    inset: 100% 0 auto 0;
+    height: 24px;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.55) 0%,
+      hsl(var(--background) / 0) 100%
+    );
+  }
+
+  .dark .glass-bar::after {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  /* Apple accessibility — frostier when transparency is reduced */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .glass-panel,
+    .glass-nav,
+    .glass-popover {
+      --glass-blur: 32px;
+      --glass-saturate: 120%;
+      @apply bg-white/75 dark:bg-white/[0.12];
+    }
+
+    .glass::before,
+    .glass-panel::before,
+    .glass-nav::before,
+    .glass-popover::before {
+      opacity: 0.35;
+    }
+  }
+
+  /* Subtle pixel grain — adds the Apple-photographed feel without being noisy */
+  .grain::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+    opacity: 0.04;
+    border-radius: inherit;
+  }
+
+  .ring-shadow {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.7),
+      0 1px 1px rgba(15,15,20,0.04),
+      0 6px 16px -8px rgba(15,15,20,0.12);
+  }
+  .dark .ring-shadow {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.05),
+      0 6px 24px -8px rgba(0,0,0,0.5);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
+
+  .mask-fade-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, black 75%, transparent);
+    mask-image: linear-gradient(to bottom, black 75%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
