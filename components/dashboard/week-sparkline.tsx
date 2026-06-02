@@ -52,7 +52,7 @@ export function WeekSparkline({ series }: WeekSparklineProps) {
                       initial={{ height: 0 }}
                       animate={{ height: `${h}%` }}
                       transition={{ duration: 0.7, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                      className={`w-full rounded-md ${isToday ? "bg-foreground" : "bg-foreground/15"}`}
+                      className={`pointer-events-none w-full rounded-md ${isToday ? "bg-foreground" : "bg-foreground/15"}`}
                       style={{ minHeight: 2 }}
                     />
                   </button>
