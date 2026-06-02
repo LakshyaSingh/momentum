@@ -40,7 +40,7 @@ export function WeekSparkline({ series }: WeekSparklineProps) {
           <div key={i} className="flex flex-1 flex-col items-center gap-2">
             <div className="relative w-full">
               {hovered === i && (
-                <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap animate-in fade-in-0 zoom-in-95">
+                <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap">
                   <ChartTooltip
                     label={dateLabel}
                     value={`${d.count} application${d.count === 1 ? "" : "s"}`}
