@@ -7,7 +7,7 @@ type ChartTooltipProps = {
 
 export function ChartTooltip({ label, value }: ChartTooltipProps) {
   return (
-    <div className="min-w-[7.5rem] rounded-xl border border-border/70 bg-background/95 px-3.5 py-2.5 shadow-xl backdrop-blur-md duration-150 ease-out animate-in fade-in-0 slide-in-from-bottom-1 dark:border-white/15 dark:bg-zinc-950/95">
+    <div className="min-w-[7.5rem] rounded-xl border border-border/70 bg-background/95 px-3.5 py-2.5 shadow-xl backdrop-blur-md duration-300 ease-out animate-in fade-in-0 slide-in-from-bottom-2 dark:border-white/15 dark:bg-zinc-950/95">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
         {label}
       </p>
