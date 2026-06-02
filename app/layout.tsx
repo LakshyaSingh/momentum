@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "Momentum · apply with intention",
+  title: "Momentum",
   description:
     "A premium, habit-driven job application tracker. Track every application. Earn every day.",
   applicationName: "Momentum",
