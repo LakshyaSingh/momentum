@@ -522,3 +522,41 @@
     }
   }
 }
+
+/*
+ * Safari-only glass performance tuning.
+ *
+ * WebKit re-rasterizes a backdrop-filter region on every frame it is exposed
+ * (notably while the fixed nav/quote bar are on screen during scroll), and the
+ * cost scales with blur radius AND the number of chained filter functions.
+ * Chromium composites this far more cheaply, so the full glass stack only feels
+ * sluggish in Safari and the installed Safari web app.
+ *
+ * Scope: the @supports query matches Safari (desktop + iOS + standalone web
+ * app) and NOT Chromium — hanging-punctuation is WebKit-only. Chrome/Edge/Brave
+ * etc. never see these rules and keep the full-fidelity glass.
+ *
+ * These rules are intentionally UNLAYERED so they win over the @layer
+ * components definitions in both light and dark mode (we override the resolved
+ * backdrop-filter directly rather than the per-mode --glass-* vars, whose dark
+ * override would otherwise take precedence).
+ *
+ * Changes for Safari only:
+ *   - blur 14/18px -> 8px, saturate 180/220% -> 140%
+ *   - drop the brightness()/contrast() filter functions (2 funcs instead of 4)
+ *   - drop the animated backdrop-filter transition (per-frame re-raster on hover)
+ * Static appearance stays very close; box-shadow rim + highlight layers are
+ * untouched, so the material still reads as glass.
+ */
+@supports (hanging-punctuation: first) and (font: -apple-system-body) and
+  (-webkit-appearance: none) {
+  .glass,
+  .glass-panel,
+  .glass-nav,
+  .glass-popover,
+  .glass-bar {
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    backdrop-filter: blur(8px) saturate(140%);
+    transition: box-shadow 200ms ease;
+  }
+}
