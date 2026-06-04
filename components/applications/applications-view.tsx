@@ -37,6 +37,14 @@ type ApplicationsViewProps = {
   query: ApplicationsQuery;
 };
 
+// Hybrid search threshold. At or below this many total applications we load the
+// full dataset into the browser once and filter in memory (instant, zero
+// network per keystroke). Above it we skip the index entirely and rely on the
+// trigram-backed server search (debounced query -> one page), so we never
+// download the whole table and search cost stays flat at any size. The switch
+// is automatic and invisible to the user.
+const CLIENT_SEARCH_MAX = 5000;
+
 export function ApplicationsView({
   serverRows,
   filteredTotal,
@@ -64,9 +72,19 @@ export function ApplicationsView({
   const prevTotalAll = useRef(totalAll);
 
   const hasActiveFilters = Boolean(filters.search.trim() || filters.statuses.length);
-  const useClientSearch = hasActiveFilters && searchIndex !== null;
+  // Large datasets use the server (trigram) search; small ones use the
+  // in-browser index. searchIndex stays null in server mode, which the existing
+  // server-fallback effect below already keys off of.
+  const useServerSearch = totalAll > CLIENT_SEARCH_MAX;
+  const useClientSearch = hasActiveFilters && searchIndex !== null && !useServerSearch;
 
   useEffect(() => {
+    // Server-search mode: never download the full index.
+    if (useServerSearch) {
+      setIndexLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     fetch("/api/applications/search-index")
@@ -89,11 +107,11 @@ export function ApplicationsView({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [useServerSearch]);
 
   // Keep the client search index in sync after creates/deletes refresh server data.
   useEffect(() => {
-    if (!indexReady.current || prevTotalAll.current === totalAll) return;
+    if (useServerSearch || !indexReady.current || prevTotalAll.current === totalAll) return;
 
     prevTotalAll.current = totalAll;
 
