@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import type { ApplicationStatus } from "@prisma/client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -205,11 +213,19 @@ export function ApplicationsView({
     return () => window.clearTimeout(timer);
   }, [filters, hasActiveFilters, query.search, query.statuses, pushQuery, searchIndex]);
 
+  // Defer the search term that drives filtering so fast typing stays smooth:
+  // the controlled input updates at normal priority (instant keystrokes) while
+  // the expensive full-dataset filter + table re-render runs at lower priority
+  // and can be interrupted. This is the main fix for typing lag — felt on both
+  // browsers, worst on Safari where each re-render also re-rasterizes the glass
+  // card's backdrop-filter.
+  const deferredSearch = useDeferredValue(filters.search);
+
   const clientRows = useMemo(() => {
     if (!useClientSearch) return [];
-    const filtered = filterApplicationRows(searchIndex!, filters.search, filters.statuses);
+    const filtered = filterApplicationRows(searchIndex!, deferredSearch, filters.statuses);
     return sortApplicationRows(filtered, sort);
-  }, [useClientSearch, searchIndex, filters.search, filters.statuses, sort]);
+  }, [useClientSearch, searchIndex, deferredSearch, filters.statuses, sort]);
 
   const safeClientPage = clampApplicationsPage(clientPage, clientRows.length, APPLICATIONS_PAGE_SIZE);
 
