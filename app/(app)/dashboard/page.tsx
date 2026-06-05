@@ -51,18 +51,11 @@ async function DashboardBody({ user }: { user: SessionUser }) {
         </GlassCard>
         <div className="grid grid-cols-1 gap-4 md:col-span-2">
           <StreakDisplay current={streaks.current} longest={streaks.longest} />
-          <div className="grid grid-cols-2 gap-4">
-            <StatTile
-              label="This week"
-              value={weekTotal}
-              suffix={weekTotal === 1 ? "application" : "applications"}
-            />
-            <StatTile
-              label="All time"
-              value={totalAll}
-              suffix={totalAll === 1 ? "application" : "applications"}
-            />
-          </div>
+          <StatTile
+            label="All time"
+            value={totalAll}
+            suffix={totalAll === 1 ? "application" : "applications"}
+          />
         </div>
       </div>
 
@@ -97,10 +90,7 @@ function DashboardBodySkeleton() {
         <div className="h-48 rounded-3xl bg-muted/35 md:col-span-1" />
         <div className="grid gap-4 md:col-span-2">
           <div className="h-28 rounded-3xl bg-muted/35" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-24 rounded-3xl bg-muted/30" />
-            <div className="h-24 rounded-3xl bg-muted/30" />
-          </div>
+          <div className="h-24 rounded-3xl bg-muted/30" />
         </div>
       </div>
       <div className="h-56 rounded-3xl bg-muted/30" />
