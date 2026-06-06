@@ -46,7 +46,7 @@ export function StatusPill({ status, className }: { status: ApplicationStatus; c
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium",
         className,
       )}
       style={{
@@ -56,7 +56,7 @@ export function StatusPill({ status, className }: { status: ApplicationStatus; c
       }}
     >
       <span
-        className="size-1.5 rounded-full"
+        className="size-1.5 shrink-0 rounded-full"
         style={{ background: `hsl(var(--status-${token}))` }}
       />
       {STATUS_LABELS[status]}
