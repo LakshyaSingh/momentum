@@ -269,6 +269,21 @@ export async function parseJobLink(url: string): Promise<ParseJobResult> {
   const canonicalUrl = canonicalizeJobUrl(url);
   const useCanonical = canonicalUrl !== url;
 
+  // Official ATS JSON APIs (Greenhouse, Lever) first: they return clean,
+  // structured data and never trip the bot challenge that the rendered HTML
+  // pages serve to datacenter IPs. Falls through to HTML scraping on a miss.
+  try {
+    const { fetchFieldsFromAtsApi } = await import("@/lib/job-link/ats-api");
+    const apiFields =
+      (await fetchFieldsFromAtsApi(canonicalUrl)) ??
+      (useCanonical ? await fetchFieldsFromAtsApi(url) : null);
+    if (apiFields && (apiFields.role || apiFields.company)) {
+      return { ok: true, fields: apiFields, source: "json-ld" };
+    }
+  } catch {
+    // Non-fatal — fall through to the HTML pipeline.
+  }
+
   if (useCanonical) {
     try {
       const html = await fetchJobPageHtml(canonicalUrl);
