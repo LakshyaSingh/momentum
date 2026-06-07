@@ -19,6 +19,17 @@ function looksLikeHttpUrl(value: string): boolean {
   return /^https?:\/\/.+/i.test(value.trim());
 }
 
+/**
+ * Coerce an unknown (possibly non-string) value into a safe toast message.
+ * Server error responses are not guaranteed to be strings — e.g. an
+ * unexpected 500 body or a structured error object — and passing a non-string
+ * to sonner's toast renders it as a React child, throwing React error #31
+ * ("Objects are not valid as a React child") and white-screening the app.
+ */
+function asMessage(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+}
+
 export function JobLinkField({
   value,
   onChange,
@@ -42,14 +53,14 @@ export function JobLinkField({
         body: JSON.stringify({ url: trimmed }),
       });
 
-      const data = (await response.json()) as {
+      const data = (await response.json().catch(() => ({}))) as {
         fields?: ParsedJobFields;
-        error?: string;
-        warning?: string;
+        error?: unknown;
+        warning?: unknown;
       };
 
       if (!response.ok) {
-        if (!quiet) toast.error(data.error ?? "Couldn't read that job posting.");
+        if (!quiet) toast.error(asMessage(data.error, "Couldn't read that job posting."));
         return;
       }
 
@@ -70,8 +81,12 @@ export function JobLinkField({
         data.fields.notes,
       ].filter(Boolean);
       if (!quiet) {
-        if (data.warning) {
-          toast.warning(data.warning);
+        const warning =
+          typeof data.warning === "string" && data.warning.trim().length > 0
+            ? data.warning
+            : null;
+        if (warning) {
+          toast.warning(warning);
         } else {
           toast.success(
             filled.length > 0

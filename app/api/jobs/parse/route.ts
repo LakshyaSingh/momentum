@@ -9,7 +9,16 @@ const BodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
+  // Guard session resolution: if getCurrentUser throws (Supabase/Prisma
+  // hiccup) it would otherwise escape as an unhandled 500 with a non-JSON
+  // body, and any client that renders that body can crash. Always return a
+  // JSON { error: string }.
+  let user: Awaited<ReturnType<typeof getCurrentUser>>;
+  try {
+    user = await getCurrentUser();
+  } catch {
+    return NextResponse.json({ error: "Could not verify your session." }, { status: 500 });
+  }
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
