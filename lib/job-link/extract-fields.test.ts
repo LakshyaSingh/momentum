@@ -551,6 +551,21 @@ if (workdayResult.ok) {
   assert.equal(workdayResult.fields.location, "San Francisco, CA");
 }
 
+// Workday: a generic "CORPORATE-CAREERS" path segment must NOT override the
+// tenant subdomain as the company (regression — used to yield "Corporate").
+const workdayCorpResult = extractJobFieldsFromHtml(
+  `<html><body><h1 data-automation-id="jobPostingHeader">Product Manager</h1></body></html>`,
+  "https://northwesternmutual.wd5.myworkdayjobs.com/en-US/CORPORATE-CAREERS/job/Product-Manager_JR-43483",
+);
+assert.equal(workdayCorpResult.ok, true);
+if (workdayCorpResult.ok) {
+  // Derived from the tenant subdomain ("northwesternmutual"), not the generic
+  // "CORPORATE-CAREERS" path segment. slugToLabel can't re-insert the space in
+  // a concatenated tenant, but "Northwesternmutual" beats the wrong "Corporate".
+  assert.match(workdayCorpResult.fields.company ?? "", /Northwestern/i);
+  assert.notEqual(workdayCorpResult.fields.company, "Corporate");
+}
+
 // ---------------------------------------------------------------------------
 // BambooHR tenant subdomain → company
 // ---------------------------------------------------------------------------
