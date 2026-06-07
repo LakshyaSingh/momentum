@@ -143,6 +143,90 @@ async function fromLever(url: URL): Promise<ParsedJobFields | null> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Ashby
+// ---------------------------------------------------------------------------
+
+function ashbyTarget(url: URL): { tenant: string; id: string } | undefined {
+  if (!/(^|\.)ashbyhq\.com$/i.test(url.hostname)) return undefined;
+  const segments = url.pathname.split("/").filter(Boolean);
+  const tenant = segments[0];
+  const id = segments[1] ?? url.searchParams.get("ashby_jid") ?? undefined;
+  if (!tenant || !id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return undefined;
+  }
+  return { tenant, id };
+}
+
+function cleanAshbyLocation(value: unknown): string | undefined {
+  // Ashby prefixes some locations like "*HQ - San Francisco, CA".
+  const text = cleanText(value);
+  return text ? text.replace(/^\*?\s*(HQ\s*-\s*)?/i, "").trim() || undefined : undefined;
+}
+
+async function fromAshby(url: URL): Promise<ParsedJobFields | null> {
+  const target = ashbyTarget(url);
+  if (!target) return null;
+
+  // Ashby's public API has no get-one-by-id endpoint — it returns the whole
+  // board, so we fetch it and find the posting matching the URL's job id.
+  const json = asRecord(
+    await fetchJson(
+      `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(target.tenant)}?includeCompensation=true`,
+    ),
+  );
+  const jobs = Array.isArray(json?.jobs) ? json!.jobs : [];
+  const job = asRecord(jobs.find((j) => asRecord(j)?.id === target.id));
+  if (!job) return null;
+
+  const role = cleanText(job.title);
+  if (!role) return null;
+
+  return prune({
+    role,
+    location: cleanAshbyLocation(job.location),
+    company: slugToLabel(target.tenant),
+    salary: cleanText(asRecord(job.compensation)?.compensationTierSummary),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// SmartRecruiters
+// ---------------------------------------------------------------------------
+
+function smartRecruitersTarget(url: URL): { company: string; id: string } | undefined {
+  if (!/(^|\.)smartrecruiters\.com$/i.test(url.hostname)) return undefined;
+  const segments = url.pathname.split("/").filter(Boolean);
+  const company = segments[0];
+  // Posting path is "<id>-<slug>" or just "<id>"; the id is the leading digits.
+  const idMatch = segments[1]?.match(/^(\d{6,})/);
+  if (!company || !idMatch) return undefined;
+  return { company, id: idMatch[1]! };
+}
+
+async function fromSmartRecruiters(url: URL): Promise<ParsedJobFields | null> {
+  const target = smartRecruitersTarget(url);
+  if (!target) return null;
+
+  const json = asRecord(
+    await fetchJson(
+      `https://api.smartrecruiters.com/v1/companies/${encodeURIComponent(target.company)}/postings/${target.id}`,
+    ),
+  );
+  if (!json) return null;
+
+  const role = cleanText(json.name);
+  const location = asRecord(json.location);
+  const companyName = cleanText(asRecord(json.company)?.name) ?? slugToLabel(target.company);
+  if (!role) return null;
+
+  return prune({
+    role,
+    location: cleanText(location?.fullLocation),
+    company: companyName,
+  });
+}
+
 function prune(fields: ParsedJobFields): ParsedJobFields {
   return Object.fromEntries(
     Object.entries(fields).filter(([, v]) => typeof v === "string" && v.length > 0),
@@ -160,5 +244,10 @@ export async function fetchFieldsFromAtsApi(rawUrl: string): Promise<ParsedJobFi
   } catch {
     return null;
   }
-  return (await fromGreenhouse(url)) ?? (await fromLever(url));
+  return (
+    (await fromGreenhouse(url)) ??
+    (await fromLever(url)) ??
+    (await fromAshby(url)) ??
+    (await fromSmartRecruiters(url))
+  );
 }
