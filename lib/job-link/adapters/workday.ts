@@ -29,19 +29,27 @@ export const workdayAdapter: AtsAdapter = {
     const tenantCompany =
       tenant && tenant !== "www" ? slugToLabel(tenant.replace(/^wd\d+$/i, "")) : undefined;
 
-    // Some Workday URLs include the company name in a path segment that ends
-    // with "Careers". Prefer that over the tenant when present.
+    // Some Workday URLs carry a company-ish name in a path segment ending in
+    // "Careers" (e.g. ".../AcmeCareers/..."). This is only a *fallback* for
+    // when the tenant subdomain is missing/unusable — the careers segment is
+    // very often a generic site label ("CORPORATE-CAREERS", "External-Careers")
+    // rather than the company, so it must never override the tenant.
     const segments = url.pathname.split("/").filter(Boolean);
     const careersSegment = segments.find((segment) => /careers$/i.test(segment));
-    const careersCompany = careersSegment
+    const careersName = careersSegment
       ? slugToLabel(careersSegment.replace(/careers$/i, "").replace(/^-+|-+$/g, ""))
       : undefined;
+    // Drop generic Workday site labels so they're never used as a company.
+    const careersCompany =
+      careersName && !/^(corporate|external|internal|careers?|jobs?|talent|global)$/i.test(careersName)
+        ? careersName
+        : undefined;
 
     return {
       source: "ats:workday",
       fields: {
         role: role ?? pathRole(url.pathname),
-        company: careersCompany ?? tenantCompany,
+        company: tenantCompany ?? careersCompany,
         location: location ?? pathLocation(url.pathname),
       },
     };
