@@ -56,10 +56,8 @@ export function JobsQuoteBar() {
           className="pointer-events-auto flex w-full max-w-2xl items-center gap-4 rounded-full glass-nav px-5 py-2 sm:px-6"
           aria-label={`Quote from ${quote.author}: ${quote.text}`}
         >
-          <p className="line-clamp-2 flex-1 text-center text-[12px] italic leading-snug text-foreground/85 sm:text-left sm:text-sm">
-            <span className="text-muted-foreground/60">&ldquo;</span>
+          <p className="line-clamp-2 flex-1 text-left text-[12px] italic leading-snug text-foreground/85 sm:text-sm">
             {quote.text}
-            <span className="text-muted-foreground/60">&rdquo;</span>
           </p>
           <span className="hidden shrink-0 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:inline-block">
             {quote.author}
