@@ -53,14 +53,10 @@ export function JobsQuoteBar() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: reduce ? 0 : -8 }}
           transition={{ duration: reduce ? 0.15 : 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-auto flex w-full max-w-2xl items-center gap-3 rounded-full glass-nav px-3 py-1.5 sm:gap-4 sm:px-4 sm:py-2"
+          className="pointer-events-auto flex w-full max-w-2xl items-center gap-4 rounded-full glass-nav px-5 py-2 sm:px-6"
           aria-label={`Quote from ${quote.author}: ${quote.text}`}
         >
-          <div
-            aria-hidden
-            className="size-9 shrink-0 rounded-full bg-[radial-gradient(120%_120%_at_30%_20%,#3a3a52_0%,#15151f_70%)] ring-1 ring-foreground/10 sm:size-10"
-          />
-          <p className="line-clamp-2 flex-1 text-[12px] italic leading-snug text-foreground/85 sm:text-sm">
+          <p className="line-clamp-2 flex-1 text-center text-[12px] italic leading-snug text-foreground/85 sm:text-left sm:text-sm">
             <span className="text-muted-foreground/60">&ldquo;</span>
             {quote.text}
             <span className="text-muted-foreground/60">&rdquo;</span>
