@@ -56,7 +56,7 @@ export function LandingHero() {
         />
         <div className="liquid-glass-frame relative">
           <Image
-            src="/landing/dashboard.jpg"
+            src="/landing/dashboard.png"
             alt="Momentum dashboard with daily goal ring, streak, and weekly chart"
             width={1024}
             height={766}
