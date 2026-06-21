@@ -41,7 +41,7 @@ export default function MarketingPage() {
           eyebrow="Home"
           title="Your day, in focus."
           description="One ring. One streak. One number that matters most: today. Open Momentum and the only thing you see is what you came to do."
-          imageSrc="/landing/dashboard.jpg"
+          imageSrc="/landing/dashboard.png"
           imageAlt="Dashboard showing daily goal ring, current streak, and weekly chart"
           accent="emerald"
         />
@@ -50,8 +50,8 @@ export default function MarketingPage() {
           eyebrow="Applications"
           title="Every application. One place."
           description="Search, filter, sort. From the first cold email to the final offer, all on one Liquid Glass surface. Built for thousands of rows, designed to feel like ten."
-          imageSrc="/landing/applications.jpg"
-          imageAlt="Applications table with search, status filters, and 1407 applications"
+          imageSrc="/landing/applications.png"
+          imageAlt="Applications table with search, status filters, and hundreds of applications"
           accent="blue"
           reverse
         />
@@ -60,7 +60,7 @@ export default function MarketingPage() {
           eyebrow="Analytics"
           title="Patterns hide in your data."
           description="We surface them. Volume over time, response rate, the funnel from applied to offer. Read like a story, not a spreadsheet."
-          imageSrc="/landing/analytics.jpg"
+          imageSrc="/landing/analytics.png"
           imageAlt="Analytics view with applications-over-time chart and funnel"
           accent="violet"
         />
@@ -69,8 +69,8 @@ export default function MarketingPage() {
           eyebrow="Consistency"
           title="Show up. Every day."
           description="A year of effort, in a single grid. Watch your longest streak grow, your best day climb, your worst day fade. The job is hard. The habit shouldn't be."
-          imageSrc="/landing/calendar.jpg"
-          imageAlt="Calendar heatmap with 20-day streak and 117-day longest streak"
+          imageSrc="/landing/calendar.png"
+          imageAlt="Calendar heatmap with a 90-day streak"
           accent="amber"
           reverse
         />
@@ -79,7 +79,7 @@ export default function MarketingPage() {
           eyebrow="Import"
           title="Bring your history with you."
           description="Drop in any spreadsheet: Excel, Numbers, Sheets, CSV. We guess the columns, you confirm, then everything snaps into Momentum."
-          imageSrc="/landing/import.jpg"
+          imageSrc="/landing/import.png"
           imageAlt="Import page with drag-and-drop spreadsheet zone"
           accent="rose"
         />
