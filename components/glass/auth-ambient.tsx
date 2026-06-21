@@ -1,5 +1,5 @@
 /**
- * AuthAmbient — subtle violet + cyan blooms behind auth pages so Liquid Glass
+ * AuthAmbient — subtle violet + cyan blooms behind auth pages so the glass
  * has colored content to lens through. Sits over the pure-black auth shell;
  * deliberately avoids the teal/green hue band (180°) that previously caused
  * a green tint while scrolling.
