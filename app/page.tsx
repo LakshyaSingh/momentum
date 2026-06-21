@@ -49,7 +49,7 @@ export default function MarketingPage() {
         <FeatureRow
           eyebrow="Applications"
           title="Every application. One place."
-          description="Search, filter, sort. From the first cold email to the final offer, all on one Liquid Glass surface. Built for thousands of rows, designed to feel like ten."
+          description="Search, filter, sort. From the first cold email to the final offer, all on one glassy surface. Built for thousands of rows, designed to feel like ten."
           imageSrc="/landing/applications.png"
           imageAlt="Applications table with search, status filters, and hundreds of applications"
           accent="blue"
