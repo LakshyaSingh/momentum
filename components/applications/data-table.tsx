@@ -268,7 +268,7 @@ function RowActions({
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[12rem]">
+      <DropdownMenuContent align="end" className="min-w-[12rem]" liquidGlass>
         <DropdownMenuItem onSelect={onEdit}>
           <Pencil className="mr-2 size-4" /> Edit
         </DropdownMenuItem>

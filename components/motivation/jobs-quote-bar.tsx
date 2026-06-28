@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMotivationStore } from "@/stores/motivation-store";
 import { JOBS_QUOTES } from "@/content/jobs-quotes";
+import { MomentumGlass } from "@/components/glass/liquid-glass";
+import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import {
+  DeclarativeGlassLens,
+  primaryGlassSceneId,
+  useDeclarativeSceneSupport,
+} from "@/components/glass/declarative-glass-scene";
 
 // Seed value used before the user has logged their first application. We show
 // a strong opening line so the bar has presence on a fresh account.
@@ -25,6 +33,10 @@ const DEFAULT_QUOTE_IDX = Math.max(
 export function JobsQuoteBar() {
   const latestQuote = useMotivationStore((s) => s.latestQuote);
   const reduce = useReducedMotion();
+  const pathname = usePathname();
+  const sceneId = primaryGlassSceneId(pathname);
+  const useRouteScene = useDeclarativeSceneSupport(sceneId);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   // Avoid hydration mismatch: zustand's persist middleware reads from
   // localStorage on the client, so the server render and the first client
@@ -53,15 +65,32 @@ export function JobsQuoteBar() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: reduce ? 0 : -8 }}
           transition={{ duration: reduce ? 0.15 : 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-auto flex w-full max-w-2xl items-center gap-4 rounded-full glass-nav px-5 py-2 sm:px-6"
-          aria-label={`Quote from ${quote.author}: ${quote.text}`}
+          className="pointer-events-auto w-full max-w-2xl"
         >
-          <p className="line-clamp-2 flex-1 text-left text-[12px] italic leading-snug text-foreground/85 sm:text-sm">
-            {quote.text}
-          </p>
-          <span className="hidden shrink-0 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:inline-block">
-            {quote.author}
-          </span>
+          <MomentumGlass
+            variant="nav"
+            data-glass-scene-mode={useRouteScene ? "declarative" : "native"}
+            className="native-liquid-glass relative w-full rounded-full glass-nav px-5 py-2 sm:px-6"
+            aria-label={`Quote from ${quote.author}: ${quote.text}`}
+          >
+            {useRouteScene && sceneId && (
+              <DeclarativeGlassLens
+                sceneId={sceneId}
+                horizontal={isMobile ? "left" : "center"}
+                viewportInsetX={isMobile ? 12 : 0}
+                viewportInsetY={isMobile ? 64 : 80}
+                mobile={isMobile}
+              />
+            )}
+            <div className="relative z-10 flex w-full items-center gap-4">
+              <p className="line-clamp-2 flex-1 text-left text-[12px] italic leading-snug text-foreground/85 sm:text-sm">
+                {quote.text}
+              </p>
+              <span className="hidden shrink-0 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:inline-block">
+                {quote.author}
+              </span>
+            </div>
+          </MomentumGlass>
         </motion.div>
       </AnimatePresence>
     </div>

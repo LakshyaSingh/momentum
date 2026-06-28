@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { MomentumGlass } from "@/components/glass/liquid-glass";
 import { Input, type InputProps } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -113,27 +114,28 @@ export function AutocompleteInput({
       />
 
       {open && filtered.length > 0 && (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-border/60 bg-popover p-1 shadow-lg"
+        <MomentumGlass
+          variant="menu"
+          className="native-liquid-glass glass-popover glass-menu-surface grain absolute z-50 mt-1 w-full overflow-hidden rounded-xl p-1"
         >
-          {filtered.map((item, index) => (
-            <li key={item} role="option" aria-selected={index === highlight}>
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
-                  index === highlight && "bg-accent",
-                )}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectSuggestion(item)}
-              >
-                {item}
-              </button>
-            </li>
-          ))}
-        </ul>
+          <ul id={listId} role="listbox" className="max-h-48 overflow-auto">
+            {filtered.map((item, index) => (
+              <li key={item} role="option" aria-selected={index === highlight}>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                    index === highlight && "bg-accent",
+                  )}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectSuggestion(item)}
+                >
+                  {item}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </MomentumGlass>
       )}
     </div>
   );

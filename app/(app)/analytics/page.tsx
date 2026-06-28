@@ -4,6 +4,8 @@ import { computeStreaksForUser } from "@/lib/streak";
 import { buildFunnel, buildProductivity } from "@/lib/analytics";
 import { AnalyticsClient } from "@/components/analytics/analytics-client";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { DeclarativeGlassSceneRegistration } from "@/components/glass/declarative-glass-scene";
+import { AnalyticsGlassScene } from "@/components/glass/primary-route-glass-scenes";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,13 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="space-y-8">
+      <DeclarativeGlassSceneRegistration id="analytics">
+        <AnalyticsGlassScene
+          applications={clientApps}
+          funnel={funnel}
+          productivity={productivity}
+        />
+      </DeclarativeGlassSceneRegistration>
       <ScrollReveal as="header">
         <h1 className="text-display-md font-semibold tracking-tight">Analytics</h1>
         <p className="mt-1 text-muted-foreground">

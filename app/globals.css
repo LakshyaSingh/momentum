@@ -238,6 +238,12 @@
       0 10px 24px -12px rgba(15, 15, 20, 0.16);
   }
 
+  .glass-menu-surface {
+    @apply bg-white/85;
+    --glass-blur: 28px;
+    --glass-brightness: 1.04;
+  }
+
   /*
    * Highlights layer — Apple's light-source model.
    * Sized in absolute units so the glint stays a corner detail on large
@@ -355,6 +361,12 @@
       inset 0 -0.5px 0 0 rgba(255, 255, 255, 0.04),
       0 12px 32px -16px rgba(0, 0, 0, 0.5);
     --glass-brightness: 1.16;
+  }
+
+  .dark .glass-menu-surface {
+    @apply bg-zinc-950/85;
+    --glass-blur: 28px;
+    --glass-brightness: 1.08;
   }
 
   .dark .glass::before,
@@ -542,9 +554,10 @@
  * override would otherwise take precedence).
  *
  * Changes for Safari only:
- *   - blur 14/18px -> 8px, saturate 180/220% -> 140%
+ *   - use a compositor-native 8px blur and 140% saturation
  *   - drop the brightness()/contrast() filter functions (2 funcs instead of 4)
  *   - drop the animated backdrop-filter transition (per-frame re-raster on hover)
+ *   - give floating navigation a denser adaptive tint for text contrast
  * Static appearance stays very close; box-shadow rim + highlight layers are
  * untouched, so the material still reads as glass.
  */
@@ -555,8 +568,79 @@
   .glass-nav,
   .glass-popover,
   .glass-bar {
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+    backdrop-filter: blur(8px) saturate(140%) !important;
     transition: box-shadow 200ms ease;
   }
+
+  .glass-nav {
+    background-color: rgba(248, 248, 250, 0.78);
+  }
+
+  .dark .glass-nav {
+    background-color: rgba(10, 10, 12, 0.72);
+  }
+
+  .glass-nav[data-glass-scene-mode="declarative"] {
+    background-color: rgba(248, 248, 250, 0.68);
+  }
+
+  .dark .glass-nav[data-glass-scene-mode="declarative"] {
+    background-color: rgba(10, 10, 12, 0.58);
+  }
+}
+
+@keyframes declarative-dashboard-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, calc(100dvh - 100%), 0);
+  }
+}
+
+.glass-nav[data-glass-scene-mode="declarative"] {
+  -webkit-backdrop-filter: blur(10px) saturate(145%) !important;
+  backdrop-filter: blur(10px) saturate(145%) !important;
+}
+
+.declarative-glass-scene-copy {
+  position: absolute;
+  width: 100vw;
+  min-height: 100dvh;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.42;
+  animation: declarative-dashboard-scroll 1ms linear both;
+  animation-timeline: scroll(root block);
+}
+
+.declarative-glass-tint {
+  background: rgba(248, 248, 250, 0.52);
+  box-shadow:
+    inset 0 0.75px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -0.5px 0 rgba(15, 15, 20, 0.06);
+}
+
+.dark .declarative-glass-tint {
+  background: rgba(10, 10, 12, 0.5);
+  box-shadow:
+    inset 0 0.75px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.035);
+}
+
+.dashboard-scene-card,
+.dashboard-scene-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card) / 0.72);
+}
+
+.dashboard-scene-card {
+  border-radius: 1rem;
+}
+
+.dashboard-scene-panel {
+  border-radius: 1.5rem;
 }

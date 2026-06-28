@@ -18,9 +18,12 @@ const optionalUrl = z
 
 const optionalCompanyDomain = z
   .string()
-  .max(253)
+  .max(2048)
   .optional()
-  .transform((v) => (v && v.length > 0 ? normalizeCompanyDomain(v) : undefined))
+  .refine((v) => !v || !isAtsVendorDomain(v), {
+    message: "Use the company domain, not the job board domain",
+  })
+  .transform((v) => (v === undefined ? undefined : normalizeCompanyDomain(v)))
   .refine((v) => !v || isValidCompanyDomain(v), { message: "Enter a valid domain" })
   .refine((v) => !v || !isAtsVendorDomain(v), {
     message: "Use the company domain, not the job board domain",

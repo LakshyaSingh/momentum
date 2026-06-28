@@ -30,7 +30,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
           <AvatarFallback>{initials || <UserIcon className="size-3.5" />}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[14rem]">
+      <DropdownMenuContent align="end" className="min-w-[14rem]" liquidGlass>
         <DropdownMenuLabel className="text-foreground">
           <div className="flex flex-col">
             <span className="text-sm font-medium normal-case tracking-normal">{user.name ?? "Job seeker"}</span>
