@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MomentumGlass } from "@/components/glass/liquid-glass";
 
 export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
@@ -27,7 +28,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 glass-panel grain p-6 sm:p-8 transition data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "fixed z-50 overflow-hidden transition data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
     variants: {
       side: {
@@ -54,11 +55,18 @@ export const SheetContent = React.forwardRef<
   <SheetPortal>
     <SheetOverlay />
     <DialogPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring/40">
-        <X className="size-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-      {children}
+      <MomentumGlass
+        variant="sheet"
+        className="native-liquid-glass glass-panel grain relative flex h-full max-h-[inherit] min-h-0 w-full flex-col overflow-hidden"
+      >
+        <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-full opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring/40">
+          <X className="size-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] sm:p-8">
+          {children}
+        </div>
+      </MomentumGlass>
     </DialogPrimitive.Content>
   </SheetPortal>
 ));

@@ -7,9 +7,11 @@ import {
   domainFromJobLink,
   isAtsVendorDomain,
   isValidCompanyDomain,
+  normalizeCompanyDomain,
   resolveCompanyDomain,
   resolveCompanyDomainCandidates,
 } from "@/lib/company-logo";
+import { ApplicationSchema } from "@/lib/validators";
 
 assert.equal(domainFromJobLink("https://www.tesla.com/careers/search/job/266962"), "tesla.com");
 assert.equal(
@@ -18,7 +20,23 @@ assert.equal(
 );
 assert.equal(isAtsVendorDomain("greenhouse.io"), true);
 assert.equal(isAtsVendorDomain("job-boards.greenhouse.io"), true);
+assert.equal(isAtsVendorDomain("workforcenow.adp.com"), true);
+assert.equal(isAtsVendorDomain("https://myjobs.adp.com/example/jobs/123"), true);
+assert.equal(isAtsVendorDomain("adp.com"), false);
 assert.equal(isAtsVendorDomain("stripe.com"), false);
+assert.equal(normalizeCompanyDomain("https://www.example.com/en/us/careers"), "example.com");
+assert.equal(normalizeCompanyDomain("careers.example.co.uk/jobs/123"), "example.co.uk");
+assert.equal(ApplicationSchema.shape.companyDomain.parse(""), "");
+assert.equal(
+  ApplicationSchema.shape.companyDomain.parse("https://www.example.com/en/us/careers"),
+  "example.com",
+);
+assert.equal(
+  ApplicationSchema.shape.companyDomain.safeParse(
+    "https://workforcenow.adp.com/mascsr/default/mdf/recruitment.html",
+  ).success,
+  false,
+);
 assert.equal(domainFromCompanyName("Stripe"), "stripe.com");
 assert.equal(domainFromCompanyName("HqO"), "hqo.com");
 assert.equal(
@@ -35,6 +53,14 @@ assert.equal(
 assert.equal(
   companyLogoApiUrl({ company: "Unknown", companyDomain: "unknown.ai" }),
   "/api/company-logo?company=Unknown&verifiedDomain=1&domain=unknown.ai",
+);
+assert.equal(
+  companyLogoApiUrl({
+    company: "Acme",
+    companyDomain: "",
+    jobLink: "https://workforcenow.adp.com/mascsr/default/mdf/recruitment.html",
+  }),
+  undefined,
 );
 assert.equal(
   companyLogoApiUrl({ company: "Tesla", jobLink: "https://www.tesla.com/careers/search/job/1" }),
@@ -123,5 +149,9 @@ assert.deepEqual(
   ["cartesia.ai"],
 );
 assert.equal(domainFromJobLink("https://careers.acme.co.uk/jobs/1"), "acme.co.uk");
+assert.equal(
+  domainFromJobLink("https://workforcenow.adp.com/mascsr/default/mdf/recruitment.html"),
+  undefined,
+);
 
 console.log("company-logo tests passed");

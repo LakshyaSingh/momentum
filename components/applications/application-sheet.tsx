@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import {
   Sheet,
   SheetContent,
@@ -22,15 +23,27 @@ interface ApplicationSheetProps {
 
 export function ApplicationSheet({ open, onOpenChange, mode, onSaved }: ApplicationSheetProps) {
   const isDesktop = useMediaQuery("(min-width: 640px)");
+  const contentRef = useRef<HTMLDivElement>(null);
   const side = isDesktop ? "right" : "bottom";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        ref={contentRef}
         side={side}
+        tabIndex={-1}
+        onOpenAutoFocus={
+          isDesktop
+            ? undefined
+            : (event) => {
+                event.preventDefault();
+                contentRef.current?.focus({ preventScroll: true });
+              }
+        }
         className={
           side === "bottom"
-            ? "max-h-[92svh] overflow-y-auto rounded-3xl"
-            : "overflow-y-auto"
+            ? "h-[calc(100dvh-1rem)] max-h-[92dvh] rounded-3xl"
+            : undefined
         }
       >
         <SheetHeader>
@@ -44,6 +57,7 @@ export function ApplicationSheet({ open, onOpenChange, mode, onSaved }: Applicat
         <div className="mt-6">
           <ApplicationForm
             mode={mode}
+            autoFocusJobLink={isDesktop}
             onDone={() => onOpenChange(false)}
             onSaved={onSaved}
           />

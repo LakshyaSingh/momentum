@@ -26,16 +26,18 @@ import { useApplicationFieldSuggestions } from "@/lib/hooks/use-application-fiel
 import { JobLinkField } from "@/components/applications/job-link-field";
 import type { ParsedJobFields } from "@/lib/job-link/types";
 import { cn, isoDateKey } from "@/lib/utils";
-import { resolveCompanyDomainCandidates } from "@/lib/company-logo";
+import { normalizeCompanyDomain, resolveCompanyDomainCandidates } from "@/lib/company-logo";
 
 type Mode = { kind: "create" } | { kind: "edit"; id: string; defaults: Partial<ApplicationInput> };
 
 export function ApplicationForm({
   mode,
+  autoFocusJobLink = true,
   onDone,
   onSaved,
 }: {
   mode: Mode;
+  autoFocusJobLink?: boolean;
   onDone?: () => void;
   onSaved?: (patch: Partial<ApplicationInput>) => void;
 }) {
@@ -129,12 +131,10 @@ export function ApplicationForm({
       jobLink: getValues("jobLink"),
       hiringOrgUrl: fields.hiringOrgUrl,
     })[0];
-    if (companyDomain) {
-      setValue("companyDomain", companyDomain, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    }
+    setValue("companyDomain", companyDomain ?? "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }
 
   return (
@@ -146,7 +146,7 @@ export function ApplicationForm({
             name="jobLink"
             render={({ field }) => (
               <JobLinkField
-                autoFocus={mode.kind === "create"}
+                autoFocus={mode.kind === "create" && autoFocusJobLink}
                 value={field.value ?? ""}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
@@ -186,7 +186,22 @@ export function ApplicationForm({
           />
         </Field>
         <Field label="Company domain" error={errors.companyDomain?.message}>
-          <Input placeholder="company.com" {...register("companyDomain")} />
+          <Controller
+            control={control}
+            name="companyDomain"
+            render={({ field }) => (
+              <Input
+                placeholder="company.com"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={() => {
+                  const normalized = normalizeCompanyDomain(field.value ?? "");
+                  if (normalized !== field.value) field.onChange(normalized);
+                  field.onBlur();
+                }}
+              />
+            )}
+          />
         </Field>
         <Field label="Location" error={errors.location?.message}>
           <Controller

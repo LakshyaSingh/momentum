@@ -7,6 +7,8 @@ import { GlassCard } from "@/components/glass/glass-card";
 import { AnimatedNumber } from "@/components/dashboard/animated-number";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { Flame } from "lucide-react";
+import { DeclarativeGlassSceneRegistration } from "@/components/glass/declarative-glass-scene";
+import { CalendarGlassScene } from "@/components/glass/primary-route-glass-scenes";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,14 @@ async function CalendarBody() {
 
   return (
     <>
+      <DeclarativeGlassSceneRegistration id="calendar">
+        <CalendarGlassScene
+          heatmap={heatmap}
+          current={streaks.current}
+          longest={streaks.longest}
+          today={streaks.appliedToday}
+        />
+      </DeclarativeGlassSceneRegistration>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <GlassCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
