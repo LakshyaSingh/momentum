@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { MomentumGlass } from "@/components/glass/liquid-glass";
 import { cn } from "@/lib/utils";
 
 export const Select = SelectPrimitive.Root;
@@ -37,22 +38,27 @@ export const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-2xl glass-popover grain text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "relative z-50 max-h-96 min-w-[8rem] rounded-2xl text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         position === "popper" && "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
         className,
       )}
       position={position}
       {...props}
     >
-      <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center">
-        <ChevronUp className="size-4" />
-      </SelectPrimitive.ScrollUpButton>
-      <SelectPrimitive.Viewport className={cn("p-1", position === "popper" && "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]")}>
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectPrimitive.ScrollDownButton className="flex h-6 items-center justify-center">
-        <ChevronDown className="size-4" />
-      </SelectPrimitive.ScrollDownButton>
+      <MomentumGlass
+        variant="menu"
+        className="native-liquid-glass glass-popover glass-menu-surface grain relative isolate w-full overflow-hidden p-1"
+      >
+        <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center">
+          <ChevronUp className="size-4" />
+        </SelectPrimitive.ScrollUpButton>
+        <SelectPrimitive.Viewport className={cn(position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]")}>
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectPrimitive.ScrollDownButton className="flex h-6 items-center justify-center">
+          <ChevronDown className="size-4" />
+        </SelectPrimitive.ScrollDownButton>
+      </MomentumGlass>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));

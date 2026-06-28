@@ -21,6 +21,8 @@ const ATS_VENDOR_DOMAINS = [
   "comeet.com",
   "pinpointhq.com",
   "personio.com",
+  "workforcenow.adp.com",
+  "myjobs.adp.com",
 ];
 
 const COMMON_SECOND_LEVEL_SUFFIXES = new Set([
@@ -81,12 +83,38 @@ export function isValidCompanyDomain(value: string): boolean {
   return DOMAIN_PATTERN.test(domain);
 }
 
+function normalizeHostname(value: string): string {
+  return value.trim().toLowerCase().replace(/^www\./, "").replace(/\.$/, "");
+}
+
 export function normalizeCompanyDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/^www\./, "");
+  const raw = value.trim();
+  if (!raw) return "";
+
+  const candidate = /^https?:\/\//i.test(raw)
+    ? raw
+    : `https://${raw.replace(/^\/\//, "")}`;
+
+  try {
+    const parsed = new URL(candidate);
+    const hostname = normalizeHostname(parsed.hostname);
+    return registrableDomain(hostname) ?? hostname;
+  } catch {
+    return normalizeHostname(raw);
+  }
 }
 
 export function isAtsVendorDomain(value: string): boolean {
-  const normalized = normalizeCompanyDomain(value);
+  const raw = value.trim();
+  let normalized = normalizeHostname(raw);
+
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    normalized = normalizeHostname(parsed.hostname);
+  } catch {
+    /* keep the normalized raw value */
+  }
+
   return ATS_VENDOR_DOMAINS.some(
     (domain) => normalized === domain || normalized.endsWith(`.${domain}`),
   );
@@ -97,7 +125,7 @@ function isSafeCompanyDomain(value: string | undefined): value is string {
 }
 
 function registrableDomain(host: string): string | undefined {
-  const normalized = normalizeCompanyDomain(host);
+  const normalized = normalizeHostname(host);
   const parts = normalized.split(".").filter(Boolean);
   if (parts.length < 2) return undefined;
 
@@ -294,11 +322,14 @@ export function companyLogoApiUrl(params: {
   jobLink?: string | null;
   hiringOrgUrl?: string | null;
   companyDomain?: string | null;
-}): string {
+}): string | undefined {
   const company = params.company.trim();
   const jobLink = params.jobLink?.trim();
   const hiringOrgUrl = params.hiringOrgUrl?.trim();
-  const companyDomain = params.companyDomain?.trim();
+  if (params.companyDomain === "") return undefined;
+  const companyDomain = params.companyDomain
+    ? normalizeCompanyDomain(params.companyDomain)
+    : undefined;
 
   const qs = new URLSearchParams();
   if (company) qs.set("company", company);

@@ -12,6 +12,8 @@ import { QuickAdd } from "@/components/applications/quick-add";
 import { AnimatedNumber } from "@/components/dashboard/animated-number";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import type { SessionUser } from "@/lib/auth";
+import { DeclarativeGlassSceneRegistration } from "@/components/glass/declarative-glass-scene";
+import { DashboardGlassScene } from "@/components/dashboard/dashboard-glass-scene";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +33,25 @@ export default async function DashboardPage() {
       </header>
 
       <Suspense fallback={<DashboardBodySkeleton />}>
-        <DashboardBody user={user} />
+        <DashboardBody
+          user={user}
+          greeting={greetingForTimezone(timeZone)}
+          firstName={firstName}
+        />
       </Suspense>
     </div>
   );
 }
 
-async function DashboardBody({ user }: { user: SessionUser }) {
+async function DashboardBody({
+  user,
+  greeting,
+  firstName,
+}: {
+  user: SessionUser;
+  greeting: string;
+  firstName: string;
+}) {
   const timeZone = user.timezone || "UTC";
   const snapshot = await getDashboardSnapshot(user.id, timeZone);
   const days = weekSeriesFromDailyCounts(snapshot.streaks.dailyCounts, timeZone, 7);
@@ -45,6 +59,20 @@ async function DashboardBody({ user }: { user: SessionUser }) {
 
   return (
     <>
+      <DeclarativeGlassSceneRegistration id="dashboard">
+        <DashboardGlassScene
+          greeting={greeting}
+          firstName={firstName}
+          today={streaks.appliedToday}
+          goal={user.dailyGoal}
+          currentStreak={streaks.current}
+          longestStreak={streaks.longest}
+          totalAll={totalAll}
+          weekTotal={weekTotal}
+          days={days}
+          recentRows={recentRows}
+        />
+      </DeclarativeGlassSceneRegistration>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <GlassCard panel className="flex flex-col items-center justify-center px-6 py-10 md:col-span-1">
           <DailyGoal today={streaks.appliedToday} goal={user.dailyGoal} />

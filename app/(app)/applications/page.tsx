@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { QuickAdd } from "@/components/applications/quick-add";
 import { ApplicationsView } from "@/components/applications/applications-view";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { DeclarativeGlassSceneRegistration } from "@/components/glass/declarative-glass-scene";
+import { ApplicationsGlassScene } from "@/components/glass/primary-route-glass-scenes";
 import {
   applicationsOrderBy,
   buildApplicationsWhere,
@@ -44,6 +46,14 @@ export default async function ApplicationsPage({
 
   return (
     <div className="space-y-8">
+      <DeclarativeGlassSceneRegistration id="applications">
+        <ApplicationsGlassScene
+          rows={rows}
+          total={totalAll}
+          filteredTotal={filteredTotal}
+          query={{ ...query, page }}
+        />
+      </DeclarativeGlassSceneRegistration>
       <ScrollReveal as="header" className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-display-md font-semibold tracking-tight">Applications</h1>

@@ -20,7 +20,7 @@ export function DailyGoal({ today, goal }: { today: number; goal: number }) {
         <AnimatedNumber value={today} className="text-display-lg font-semibold tracking-tighter" />
         <span className="text-2xl font-medium text-muted-foreground">/{goal}</span>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 max-w-32 text-balance text-xs leading-snug text-muted-foreground">
         {today >= goal
           ? "Goal met. Beautiful."
           : today === 0
