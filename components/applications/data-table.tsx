@@ -33,6 +33,10 @@ import {
   deleteApplication,
   transitionStatus,
 } from "@/app/actions/applications";
+import {
+  clearApplicationsIndexWarmCache,
+  warmApplicationsNavigation,
+} from "@/lib/applications-index-client";
 
 export interface ApplicationRow {
   id: string;
@@ -284,6 +288,8 @@ function RowActions({
               });
               const res = await transitionStatus(row.id, s);
               if (res.ok) {
+                clearApplicationsIndexWarmCache();
+                warmApplicationsNavigation(undefined, { forceIndex: true });
                 toast.success(`Moved to ${STATUS_LABELS[s]}`);
               } else {
                 onRowUpdated?.(row.id, {
@@ -304,6 +310,8 @@ function RowActions({
           onSelect={async () => {
             const res = await deleteApplication(row.id);
             if (res.ok) {
+              clearApplicationsIndexWarmCache();
+              warmApplicationsNavigation(undefined, { forceIndex: true });
               onRowDeleted?.(row.id);
               toast.success("Deleted");
             } else {

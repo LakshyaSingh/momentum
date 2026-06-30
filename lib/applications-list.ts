@@ -3,6 +3,7 @@ import { STATUS_ORDER } from "@/components/applications/status-pill";
 import type { ApplicationRow } from "@/components/applications/data-table";
 
 export const APPLICATIONS_PAGE_SIZE = 50;
+export const APPLICATIONS_CLIENT_INDEX_MAX = 5000;
 
 export type ApplicationsSortKey = "applicationDate" | "company" | "role" | "status";
 
