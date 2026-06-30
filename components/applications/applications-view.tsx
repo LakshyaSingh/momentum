@@ -18,6 +18,7 @@ import {
 } from "@/components/applications/data-table";
 import type { ApplicationFilters } from "@/components/applications/filter-bar";
 import {
+  APPLICATIONS_CLIENT_INDEX_MAX,
   APPLICATIONS_PAGE_SIZE,
   applicationsQueryToSearchParams,
   clampApplicationsPage,
@@ -29,6 +30,11 @@ import {
 } from "@/lib/applications-list";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  getApplicationsIndexWarmPromise,
+  readWarmedApplicationsIndex,
+  warmApplicationsIndex,
+} from "@/lib/applications-index-client";
 
 type ApplicationsViewProps = {
   serverRows: ApplicationRow[];
@@ -43,7 +49,7 @@ type ApplicationsViewProps = {
 // trigram-backed server search (debounced query -> one page), so we never
 // download the whole table and search cost stays flat at any size. The switch
 // is automatic and invisible to the user.
-const CLIENT_SEARCH_MAX = 5000;
+const CLIENT_SEARCH_MAX = APPLICATIONS_CLIENT_INDEX_MAX;
 
 export function ApplicationsView({
   serverRows,
@@ -85,14 +91,30 @@ export function ApplicationsView({
       return;
     }
 
-    let cancelled = false;
+    const warmed = readWarmedApplicationsIndex();
+    if (warmed && !warmed.skipped) {
+      setSearchIndex(warmed.rows);
+      setIndexLoading(false);
+      indexReady.current = true;
+      prevTotalAll.current = totalAll;
+      return;
+    }
 
-    fetch("/api/applications/search-index")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load search index");
-        return res.json() as Promise<{ rows: ApplicationRow[] }>;
-      })
+    if (warmed?.skipped) {
+      setIndexLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const request = getApplicationsIndexWarmPromise() ?? warmApplicationsIndex();
+
+    request
       .then((data) => {
+        if (data.skipped) {
+          if (!cancelled) setIndexLoading(false);
+          return;
+        }
+
         if (!cancelled) {
           setSearchIndex(data.rows);
           setIndexLoading(false);
@@ -116,12 +138,9 @@ export function ApplicationsView({
     prevTotalAll.current = totalAll;
 
     let cancelled = false;
-    fetch("/api/applications/search-index")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to reload search index");
-        return res.json() as Promise<{ rows: ApplicationRow[] }>;
-      })
+    warmApplicationsIndex({ force: true })
       .then((data) => {
+        if (data.skipped) return;
         if (!cancelled) setSearchIndex(data.rows);
       })
       .catch(() => {
