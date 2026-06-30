@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { uniqueApplicationFieldValues } from "@/lib/applications-list";
+import { warmApplicationsIndex } from "@/lib/applications-index-client";
 
 export function useApplicationFieldSuggestions() {
   const [companies, setCompanies] = useState<string[]>([]);
@@ -11,14 +12,9 @@ export function useApplicationFieldSuggestions() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/applications/search-index")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load suggestions");
-        return res.json() as Promise<{
-          rows: { company: string; role: string; location: string | null }[];
-        }>;
-      })
+    warmApplicationsIndex()
       .then((data) => {
+        if (data.skipped) return;
         if (cancelled) return;
         setCompanies(uniqueApplicationFieldValues(data.rows.map((row) => row.company)));
         setRoles(uniqueApplicationFieldValues(data.rows.map((row) => row.role)));

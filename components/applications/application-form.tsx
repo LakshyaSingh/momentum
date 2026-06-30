@@ -27,6 +27,10 @@ import { JobLinkField } from "@/components/applications/job-link-field";
 import type { ParsedJobFields } from "@/lib/job-link/types";
 import { cn, isoDateKey } from "@/lib/utils";
 import { normalizeCompanyDomain, resolveCompanyDomainCandidates } from "@/lib/company-logo";
+import {
+  clearApplicationsIndexWarmCache,
+  warmApplicationsNavigation,
+} from "@/lib/applications-index-client";
 
 type Mode = { kind: "create" } | { kind: "edit"; id: string; defaults: Partial<ApplicationInput> };
 
@@ -82,6 +86,7 @@ export function ApplicationForm({
           return;
         }
         toast.success(`Logged ${values.company}`);
+        clearApplicationsIndexWarmCache();
         try {
           trigger({
             quoteSeed: res.motivation.quoteId,
@@ -92,6 +97,7 @@ export function ApplicationForm({
           console.error("Motivation overlay failed", err);
         }
         router.refresh();
+        warmApplicationsNavigation(router, { forceIndex: true });
         onDone?.();
       } else {
         const res = await updateApplication({ id: mode.id, ...values });
@@ -101,8 +107,10 @@ export function ApplicationForm({
           return;
         }
         toast.success("Updated");
+        clearApplicationsIndexWarmCache();
         onSaved?.(values);
         router.refresh();
+        warmApplicationsNavigation(router, { forceIndex: true });
         onDone?.();
       }
     });
