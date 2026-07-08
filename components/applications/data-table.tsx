@@ -28,7 +28,6 @@ import { StatusPill, STATUS_LABELS, STATUS_ORDER } from "./status-pill";
 import { GlassCard } from "@/components/glass/glass-card";
 import { cn, formatDate } from "@/lib/utils";
 import { responseReceivedForStatus } from "@/lib/response-received";
-import type { ApplicationInput } from "@/lib/validators";
 import {
   deleteApplication,
   transitionStatus,
@@ -37,6 +36,10 @@ import {
   clearApplicationsIndexWarmCache,
   warmApplicationsNavigation,
 } from "@/lib/applications-index-client";
+import {
+  applicationInputToRowPatch,
+  applicationRowToFormDefaults,
+} from "@/lib/application-row-form";
 
 export interface ApplicationRow {
   id: string;
@@ -196,22 +199,7 @@ export function DataTable({
           mode={{
             kind: "edit",
             id: editing.id,
-            defaults: {
-              company: editing.company,
-              companyDomain: editing.companyDomain ?? undefined,
-              role: editing.role,
-              location: editing.location ?? undefined,
-              jobLink: editing.jobLink ?? undefined,
-              applicationDate: new Date(editing.applicationDate),
-              status: editing.status,
-              salary: editing.salary ?? undefined,
-              recruiter: editing.recruiter ?? undefined,
-              referral: editing.referral ?? undefined,
-              notes: editing.notes ?? undefined,
-              followUpDate: editing.followUpDate ? new Date(editing.followUpDate) : null,
-              interviewStage: editing.interviewStage ?? undefined,
-              offerStatus: editing.offerStatus ?? undefined,
-            },
+            defaults: applicationRowToFormDefaults(editing),
           }}
           onSaved={(values) =>
             onRowUpdated?.(editing.id, applicationInputToRowPatch(values))
@@ -338,34 +326,4 @@ function tokenForStatus(s: ApplicationStatus) {
     case "GHOSTED": return "ghosted";
     case "WITHDRAWN": return "withdrawn";
   }
-}
-
-function applicationInputToRowPatch(values: Partial<ApplicationInput>): Partial<ApplicationRow> {
-  return {
-    ...(values.company !== undefined ? { company: values.company } : {}),
-    ...(values.companyDomain !== undefined ? { companyDomain: values.companyDomain ?? null } : {}),
-    ...(values.role !== undefined ? { role: values.role } : {}),
-    ...(values.location !== undefined ? { location: values.location ?? null } : {}),
-    ...(values.jobLink !== undefined ? { jobLink: values.jobLink ?? null } : {}),
-    ...(values.applicationDate !== undefined
-      ? { applicationDate: values.applicationDate.toISOString() }
-      : {}),
-    ...(values.status !== undefined
-      ? {
-          status: values.status,
-          responseReceived: responseReceivedForStatus(values.status),
-        }
-      : {}),
-    ...(values.salary !== undefined ? { salary: values.salary ?? null } : {}),
-    ...(values.recruiter !== undefined ? { recruiter: values.recruiter ?? null } : {}),
-    ...(values.referral !== undefined ? { referral: values.referral ?? null } : {}),
-    ...(values.notes !== undefined ? { notes: values.notes ?? null } : {}),
-    ...(values.followUpDate !== undefined
-      ? { followUpDate: values.followUpDate?.toISOString() ?? null }
-      : {}),
-    ...(values.interviewStage !== undefined
-      ? { interviewStage: values.interviewStage ?? null }
-      : {}),
-    ...(values.offerStatus !== undefined ? { offerStatus: values.offerStatus ?? null } : {}),
-  };
 }
