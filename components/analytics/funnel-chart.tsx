@@ -27,8 +27,10 @@ export function FunnelChart({ stages }: { stages: FunnelStage[] }) {
           {stages.map((s, i) => {
             const fraction = max > 0 ? s.count / max : 0;
             const conversion =
-              i === 0 || stages[i - 1]!.count === 0
+              i === 0
                 ? 1
+                : stages[i - 1]!.count === 0
+                  ? 0
                 : s.count / stages[i - 1]!.count;
             return (
               <div key={s.key} className="space-y-1.5">
