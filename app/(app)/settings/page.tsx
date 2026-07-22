@@ -3,8 +3,10 @@ import { GlassCard } from "@/components/glass/glass-card";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { DangerZone } from "@/components/settings/danger-zone";
 import { ExportButton } from "@/components/settings/export-button";
+import { McpConnection } from "@/components/settings/mcp-connection";
 import { Separator } from "@/components/ui/separator";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { isSupabaseConfigured, mcpResourceUrl } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,14 @@ export default async function SettingsPage() {
           <ExportButton />
         </GlassCard>
       </ScrollReveal>
+
+      {isSupabaseConfigured && (
+        <ScrollReveal>
+          <GlassCard className="p-6 sm:p-8">
+            <McpConnection mcpUrl={mcpResourceUrl} />
+          </GlassCard>
+        </ScrollReveal>
+      )}
 
       <ScrollReveal>
         <DangerZone />

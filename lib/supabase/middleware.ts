@@ -45,6 +45,10 @@ export async function updateSession(request: NextRequest) {
   const isPublic =
     url.pathname === "/" ||
     url.pathname.startsWith("/api/auth") ||
+    // OAuth consent page handles its own auth (shows a sign-in prompt when
+    // logged out) and must stay reachable by both logged-out and logged-in
+    // users, so it must not be force-redirected to "/".
+    url.pathname.startsWith("/oauth") ||
     url.pathname.startsWith("/_next") ||
     url.pathname.startsWith("/favicon") ||
     url.pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/);

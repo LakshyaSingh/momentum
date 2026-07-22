@@ -20,6 +20,21 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL ?? "",
 };
 
+/**
+ * Canonical MCP resource identifier (RFC 8707 / RFC 9728). No trailing slash.
+ * MCP clients bind access tokens to this URI and it is validated on the resource
+ * server. Matches the endpoint served by `app/api/[transport]/route.ts`.
+ */
+export const mcpResourceUrl = `${env.siteUrl.replace(/\/$/, "")}/api/mcp`;
+
+/**
+ * Issuer URL of the Supabase OAuth 2.1 authorization server. Advertised to MCP
+ * clients via the protected-resource metadata, and used to validate token issuer.
+ */
+export const supabaseAuthServerUrl = env.supabaseUrl
+  ? `${env.supabaseUrl.replace(/\/$/, "")}/auth/v1`
+  : "";
+
 export const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 export const isSupabaseAdminConfigured = Boolean(isSupabaseConfigured && env.serviceRoleKey);
 export const isDatabaseConfigured = Boolean(env.databaseUrl);
