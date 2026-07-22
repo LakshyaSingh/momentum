@@ -142,6 +142,25 @@ export function buildSeries(
   });
 }
 
+/** Count applications by status. Returns every status key, zero-filled. */
+export function statusBreakdown(
+  applications: { status: ApplicationStatus }[],
+): Record<ApplicationStatus, number> {
+  const counts = {
+    APPLIED: 0,
+    OA: 0,
+    RECRUITER_SCREEN: 0,
+    INTERVIEW: 0,
+    FINAL_ROUND: 0,
+    OFFER: 0,
+    REJECTED: 0,
+    GHOSTED: 0,
+    WITHDRAWN: 0,
+  } as Record<ApplicationStatus, number>;
+  for (const a of applications) counts[a.status] += 1;
+  return counts;
+}
+
 export function topCompanies(
   applications: { company: string; status: ApplicationStatus }[],
   limit = 8,

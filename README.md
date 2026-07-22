@@ -139,6 +139,44 @@ Set `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPAB
 
 `vercel build` runs `prisma generate` automatically via the `postinstall` script. Migrations are not run on deploy. Run `npx prisma migrate deploy` against your Supabase DB whenever the schema changes.
 
+## Connect an AI agent (MCP)
+
+Momentum ships a remote **MCP server** so AI agents (Claude, Cursor, Codex, …) can add
+applications, update statuses, and answer questions about your search — e.g. an agent watching
+your inbox can auto-add a job when a "thanks for applying" email arrives and flip an application to
+`REJECTED` when a rejection lands. The polling cadence is the agent's job; Momentum never reads your
+email.
+
+- **Endpoint:** `https://your-app.vercel.app/api/mcp` (Streamable HTTP). Shown with copy-paste client
+  config under **Settings → Connections**.
+- **Auth:** OAuth 2.1. The MCP server is an OAuth *resource server*; **Supabase's OAuth 2.1 server**
+  is the authorization server (Dynamic Client Registration + PKCE). Clients discover it via
+  `/.well-known/oauth-protected-resource`. The first connection opens Google sign-in and a consent
+  screen (`/oauth/authorize`).
+- **Tools:** `create_application`, `find_applications`, `list_applications`, `get_application`,
+  `update_application`, `update_application_status`, `delete_application`, `get_search_summary`,
+  `parse_job_link`.
+
+### Supabase setup (one-time)
+
+1. Authentication → **OAuth Server**: enable it, and enable **Dynamic Client Registration**
+   (beta, free on all plans during the beta).
+2. Set the **authorization (consent) URL** to `https://your-app.vercel.app/oauth/authorize`
+   (`http://localhost:3000/oauth/authorize` for dev).
+3. That's it — no extra env vars. The resource identifier is derived from `NEXT_PUBLIC_SITE_URL`.
+
+### Connect a client
+
+```bash
+# Claude Code
+claude mcp add --transport http momentum https://your-app.vercel.app/api/mcp
+```
+
+```json
+// Cursor / any JSON MCP client
+{ "mcpServers": { "momentum": { "url": "https://your-app.vercel.app/api/mcp" } } }
+```
+
 ## v1 cuts (intentional)
 
 - No screenshot/OCR import (the tile is rendered "Coming soon").
