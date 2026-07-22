@@ -16,7 +16,13 @@ const OTP_TYPES = new Set<EmailOtpType>([
 
 function safeNextPath(nextParam: string | null, defaultNext: string) {
   const next = nextParam ?? defaultNext;
-  return next.startsWith("/") ? next : defaultNext;
+  // Same-origin absolute path only. Reject protocol-relative ("//host") and
+  // backslash tricks so `next` can safely carry a query string (e.g. the OAuth
+  // consent return URL) without becoming an open redirect.
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return defaultNext;
+  }
+  return next;
 }
 
 function redirectToSignIn(
@@ -94,9 +100,9 @@ export async function completeAuthCallback(
     });
   }
 
-  const redirectTarget = request.nextUrl.clone();
-  redirectTarget.pathname = safeNext;
-  redirectTarget.search = "";
+  // Build from the (validated, same-origin) relative `next` so it can carry a
+  // query string — e.g. /oauth/authorize?authorization_id=… for the consent flow.
+  const redirectTarget = new URL(safeNext, request.nextUrl.origin);
   const response = NextResponse.redirect(redirectTarget);
 
   const supabase = createCallbackClient(request, response);

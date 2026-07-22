@@ -14,6 +14,59 @@ export type SessionUser = {
 };
 
 /**
+ * Mirror a Supabase auth user into our domain `users` table (read-first; write
+ * only when a mirrored field drifts) and return the `SessionUser`. Shared by
+ * the cookie-session path (`getCurrentUser`) and the bearer-token path used by
+ * the MCP resource server, so an OAuth-only user who has never opened the web
+ * UI still gets a row on their first MCP call.
+ */
+export async function mirrorSupabaseUser(input: {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+}): Promise<SessionUser> {
+  const email = input.email ?? `${input.id}@unknown.local`;
+  const name = input.name ?? null;
+  const image = input.image ?? null;
+
+  const existing = await prisma.user.findUnique({ where: { id: input.id } });
+  if (existing) {
+    if (existing.email !== email || existing.name !== name || existing.image !== image) {
+      const updated = await prisma.user.update({
+        where: { id: input.id },
+        data: { email, name, image },
+      });
+      return toSessionUser(updated);
+    }
+    return toSessionUser(existing);
+  }
+
+  const created = await prisma.user.create({
+    data: { id: input.id, email, name, image },
+  });
+  return toSessionUser(created);
+}
+
+function toSessionUser(u: {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  dailyGoal: number;
+  timezone: string;
+}): SessionUser {
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    image: u.image,
+    dailyGoal: u.dailyGoal,
+    timezone: u.timezone,
+  };
+}
+
+/**
  * Resolve the current signed-in user, ensure a row exists in our `users` table,
  * and return it. If Supabase isn't configured we silently use the demo user so
  * the app remains explorable in greenfield mode.
@@ -55,46 +108,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     (user.user_metadata?.name as string | undefined) ??
     null;
   const image = (user.user_metadata?.avatar_url as string | undefined) ?? null;
-  const email = user.email ?? `${user.id}@unknown.local`;
 
-  const existing = await prisma.user.findUnique({ where: { id: user.id } });
-  if (existing) {
-    if (existing.email !== email || existing.name !== name || existing.image !== image) {
-      const updated = await prisma.user.update({
-        where: { id: user.id },
-        data: { email, name, image },
-      });
-      return {
-        id: updated.id,
-        email: updated.email,
-        name: updated.name,
-        image: updated.image,
-        dailyGoal: updated.dailyGoal,
-        timezone: updated.timezone,
-      };
-    }
-    return {
-      id: existing.id,
-      email: existing.email,
-      name: existing.name,
-      image: existing.image,
-      dailyGoal: existing.dailyGoal,
-      timezone: existing.timezone,
-    };
-  }
-
-  const created = await prisma.user.create({
-    data: { id: user.id, email, name, image },
-  });
-
-  return {
-    id: created.id,
-    email: created.email,
-    name: created.name,
-    image: created.image,
-    dailyGoal: created.dailyGoal,
-    timezone: created.timezone,
-  };
+  return mirrorSupabaseUser({ id: user.id, email: user.email, name, image });
 });
 
 export async function requireUser(): Promise<SessionUser> {
