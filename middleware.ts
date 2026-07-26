@@ -13,9 +13,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
      * - api/mcp, api/sse (bearer-authed MCP resource server — no cookie session)
+     * - api/keep-alive (Vercel Cron DB ping — no session needed)
      * - .well-known (OAuth metadata — must be publicly reachable / cross-origin)
      * - image extensions
      */
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/mcp|api/sse|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/mcp|api/sse|api/keep-alive|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
