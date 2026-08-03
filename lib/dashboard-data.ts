@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   applicationStatsTag,
-  computeStreaksForUser,
+  computeStreaksUncached,
   type StreakInfo,
   weekSeriesFromDailyCounts,
 } from "@/lib/streak";
@@ -59,8 +59,14 @@ async function loadDashboardSnapshot(
   timezone: string,
 ): Promise<DashboardSnapshot> {
   const timeZone = timezone || "UTC";
+  // Use the *uncached* streak read here. `loadDashboardSnapshot` is already
+  // wrapped in `unstable_cache` below with the same TTL and revalidation tag,
+  // and nesting one `unstable_cache` inside another is unsupported in Next.js:
+  // the inner entry keeps its own lifetime, so a tag revalidation can refresh
+  // the outer snapshot while the inner streak data stays stale (the dashboard
+  // then shows zeros or pre-import numbers even though the DB is correct).
   const [streaks, recent] = await Promise.all([
-    computeStreaksForUser(userId, timeZone),
+    computeStreaksUncached(userId, timeZone),
     prisma.application.findMany({
       where: { userId },
       orderBy: { applicationDate: "desc" },

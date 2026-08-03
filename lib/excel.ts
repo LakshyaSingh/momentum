@@ -162,6 +162,25 @@ export type DateFormat = "DDMM" | "MMDD";
  * - Either format gets disambiguated when one part is unambiguous (>12)
  * - Native Date.parse fallback for ISO and verbose strings
  */
+/**
+ * Anchor a calendar date at **noon UTC**.
+ *
+ * An application date is a calendar day, not an instant. Midnight is unsafe:
+ * `new Date("2026-08-03")` is parsed as midnight *UTC* per spec, so in any
+ * negative-offset timezone (all of the Americas) it lands on the previous local
+ * day. The dashboard buckets by day in the user's timezone, so every imported
+ * row got counted one day early and "applied today" read 0.
+ *
+ * Noon UTC is the safe anchor: it keeps the same calendar date for every offset
+ * from UTC-11 to UTC+11, and unlike local noon it does not depend on the
+ * timezone of the machine that parsed the file. (UTC+12 and beyond, e.g.
+ * Pacific/Auckland in DST, would still read as the next day; no single instant
+ * can satisfy the full -12..+14 range.)
+ */
+function utcNoon(year: number, monthIndex: number, day: number): Date {
+  return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0, 0));
+}
+
 function parseDateLike(
   value: unknown,
   prefer: DateFormat = "DDMM",
@@ -169,13 +188,29 @@ function parseDateLike(
   if (value === null || value === undefined || value === "") return undefined;
   if (value instanceof Date) return isNaN(value.getTime()) ? undefined : value;
   if (typeof value === "number") {
-    // SheetJS Excel serial → JS Date
+    // SheetJS Excel serial → JS Date. Excel serials are date-only, so read the
+    // day in UTC (that's how the serial maps) and re-anchor it at noon UTC.
     const ms = Math.round((value - 25569) * 86_400_000);
-    const d = new Date(ms);
-    if (!isNaN(d.getTime())) return d;
+    const utc = new Date(ms);
+    if (!isNaN(utc.getTime())) {
+      return utcNoon(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+    }
   }
   const s = String(value).trim();
   if (!s) return undefined;
+
+  // Date-only ISO ("2026-08-03"). Handle before the native fallback, which
+  // would parse it as midnight UTC and shift the day backwards.
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    const year = parseInt(iso[1]!, 10);
+    const month = parseInt(iso[2]!, 10);
+    const day = parseInt(iso[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const d = utcNoon(year, month - 1, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
 
   // dd/mm/yy, dd-mm-yy, dd.mm.yyyy etc.
   const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
@@ -211,15 +246,21 @@ function parseDateLike(
       }
     }
     if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
-      const d = new Date(year, month - 1, day);
+      const d = utcNoon(year, month - 1, day);
       if (!isNaN(d.getTime())) return d;
     }
   }
 
-  // Native Date as a fallback (handles ISO, "May 21 2026", etc.)
+  // Native Date as a fallback (handles "May 21 2026", RFC strings, etc.).
   const d = new Date(s);
-  if (!isNaN(d.getTime())) return d;
-  return undefined;
+  if (isNaN(d.getTime())) return undefined;
+  // If the source carried no time-of-day, re-anchor at local noon so the
+  // calendar date survives timezone conversion. A real timestamp is kept as-is.
+  const hasTime = /\d{1,2}:\d{2}/.test(s);
+  if (!hasTime) {
+    return utcNoon(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  return d;
 }
 
 function parseBool(value: unknown): boolean {
