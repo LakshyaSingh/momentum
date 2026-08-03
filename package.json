@@ -17,7 +17,8 @@
     "test:job-parse": "tsx lib/job-link/extract-fields.test.ts",
     "test:company-logo": "tsx lib/company-logo.test.ts",
     "test:company-lookup": "tsx lib/company-lookup.test.ts",
-    "test:analytics": "tsx lib/analytics.test.ts"
+    "test:analytics": "tsx lib/analytics.test.ts",
+    "test:excel": "tsx lib/excel.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
