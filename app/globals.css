@@ -177,10 +177,14 @@
       brightness(var(--glass-brightness)) contrast(var(--glass-contrast));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness)) contrast(var(--glass-contrast));
-    transition:
-      backdrop-filter 200ms ease,
-      -webkit-backdrop-filter 200ms ease,
-      box-shadow 200ms ease;
+    /*
+     * backdrop-filter is deliberately NOT transitioned. Lens-backed surfaces
+     * carry a url(#…) reference in their filter list, and filter lists whose
+     * url() references differ cannot interpolate — the browser jumps at 50%
+     * rather than animating — so the transition bought nothing while still
+     * invalidating the (expensive) filtered region on every value change.
+     */
+    transition: box-shadow 200ms ease;
   }
 
   /*
@@ -495,7 +499,12 @@
     position: absolute;
     inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
-    mix-blend-mode: overlay;
+    /*
+     * No mix-blend-mode: a blend mode forces this pseudo-element into its own
+     * compositing group stacked on top of an already backdrop-filtered surface,
+     * which costs a separate raster pass per glass card. At 4% opacity the
+     * blended and unblended results are indistinguishable.
+     */
     opacity: 0.04;
     border-radius: inherit;
   }
