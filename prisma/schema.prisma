@@ -1,5 +1,5 @@
 // Momentum — premium job application tracker
-// See plan: liquid-glass UI, streak/habit engine, Steve Jobs motivation overlay.
+// See plan: liquid-glass UI, streak/habit engine, motivation overlay.
 
 generator client {
   provider        = "prisma-client-js"
