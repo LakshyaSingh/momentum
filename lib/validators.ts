@@ -52,3 +52,34 @@ export const ApplicationUpdateSchema = ApplicationSchema.partial().extend({
   id: z.string().min(1),
 });
 export type ApplicationUpdate = z.infer<typeof ApplicationUpdateSchema>;
+
+/**
+ * A job saved to the queue but not yet applied to.
+ *
+ * Unlike ApplicationSchema, company and role are optional: capture writes the
+ * row the instant a link is pasted, and the page parse fills those in a moment
+ * later. They become required again at promotion time — applyQueuedJob refuses
+ * a row that cannot satisfy ApplicationSchema, and the UI opens the prefilled
+ * form instead. jobLink is required; a queue entry with no link is not
+ * actionable.
+ */
+export const QueuedJobSchema = z.object({
+  jobLink: z
+    .string()
+    .min(1, "Job link is required")
+    .max(2048)
+    .refine((v) => /^https?:\/\//i.test(v), { message: "Must start with http(s)://" }),
+  company: optionalString(120),
+  companyDomain: optionalCompanyDomain,
+  role: optionalString(160),
+  location: optionalString(120),
+  salary: optionalString(80),
+  notes: optionalString(2000),
+});
+
+export type QueuedJobInput = z.infer<typeof QueuedJobSchema>;
+
+export const QueuedJobUpdateSchema = QueuedJobSchema.partial().extend({
+  id: z.string().min(1),
+});
+export type QueuedJobUpdate = z.infer<typeof QueuedJobUpdateSchema>;

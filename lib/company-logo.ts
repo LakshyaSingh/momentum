@@ -42,7 +42,16 @@ const COMMON_SECOND_LEVEL_SUFFIXES = new Set([
   "net.au",
 ]);
 
-const BRAND_DOMAINS: Record<string, string> = {
+/**
+ * Prototype-less on purpose. These keys are slugs derived from user data, so a
+ * company whose slug collides with an `Object.prototype` member —
+ * `constructor`, `toString`, `valueOf`, `hasOwnProperty`, `__proto__` — must
+ * not resolve to an inherited function. A real company named "Constructor"
+ * made `BRAND_DOMAINS["constructor"]` return `Object`, which flowed into
+ * `isValidCompanyDomain` and threw `value.trim is not a function`, crashing
+ * every surface that renders a CompanyLogo.
+ */
+const BRAND_DOMAINS: Record<string, string> = Object.assign(Object.create(null), {
   tesla: "tesla.com",
   meta: "meta.com",
   facebook: "meta.com",
@@ -71,12 +80,16 @@ const BRAND_DOMAINS: Record<string, string> = {
   starbucks: "starbucks.com",
   cartesia: "cartesia.ai",
   lyvhealth: "lyvhealth.com",
-};
+});
 
 const DOMAIN_PATTERN =
   /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 
 export function isValidCompanyDomain(value: string): boolean {
+  // Every caller is typed `string`, but these values arrive from dynamic
+  // lookups over user data. A non-string here previously threw and took down
+  // the client render instead of simply failing validation.
+  if (typeof value !== "string") return false;
   const domain = value.trim().toLowerCase();
   if (!domain || domain.length > 253) return false;
   if (domain.includes("/") || domain.includes("@") || domain.includes(":")) return false;

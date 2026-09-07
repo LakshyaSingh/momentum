@@ -35,61 +35,6 @@ export function slugToLabel(slug: string): string {
     .trim();
 }
 
-type DisplayFieldKey = Exclude<keyof ParsedJobFields, "hiringOrgUrl">;
-
-const FIELD_LIMITS: Record<DisplayFieldKey, number> = {
-  role: 160,
-  company: 120,
-  location: 120,
-  salary: 80,
-  recruiter: 120,
-  notes: 2000,
-};
-
-export function normalizeField(
-  key: DisplayFieldKey,
-  value: string | undefined,
-  url?: string,
-): string | undefined {
-  if (!value) return undefined;
-  if (key === "salary") return normalizeSalary(value);
-  if (key === "location") return normalizeLocation(value);
-  if (key === "recruiter") return normalizeRecruiter(value);
-  if (key === "notes") return normalizeNotes(value, url);
-  return truncate(value, FIELD_LIMITS[key]);
-}
-
-export function mergeFields(
-  ...groups: Array<ParsedJobFields | undefined>
-): ParsedJobFields;
-export function mergeFields(
-  url: string | undefined,
-  ...groups: Array<ParsedJobFields | undefined>
-): ParsedJobFields;
-export function mergeFields(
-  urlOrGroup: string | ParsedJobFields | undefined,
-  ...rest: Array<ParsedJobFields | undefined>
-): ParsedJobFields {
-  const url = typeof urlOrGroup === "string" ? urlOrGroup : undefined;
-  const groups = typeof urlOrGroup === "string" ? rest : [urlOrGroup, ...rest];
-  const merged: ParsedJobFields = {};
-
-  for (const group of groups) {
-    if (!group) continue;
-
-    for (const key of Object.keys(FIELD_LIMITS) as DisplayFieldKey[]) {
-      if (merged[key] || !group[key]) continue;
-      merged[key] = normalizeField(key, group[key], url);
-    }
-  }
-
-  return merged;
-}
-
-export function hasUsefulFields(fields: ParsedJobFields): boolean {
-  return Boolean(fields.role || fields.company || fields.location);
-}
-
 const FORM_FIELD_PLACEHOLDERS =
   /^(title|name|role|company|employer|organization|organisation|location|locations|city|job title|job requisition name)$/i;
 

@@ -13,6 +13,66 @@ export type SessionUser = {
   timezone: string;
 };
 
+type AuthIdentity = {
+  id: string;
+  email: string | null;
+  metadata: Record<string, unknown>;
+};
+
+/**
+ * Establish who is making this request, without paying for a round-trip.
+ *
+ * `getUser()` calls the Auth server every single time — roughly 275ms measured
+ * against this project, on every page render and every server action, on top of
+ * the identical call middleware already makes. `getClaims()` answers the same
+ * question by verifying the access token's signature locally with WebCrypto
+ * against the project's JWKS public key, which is fetched once and cached.
+ *
+ * This is a real verification, not a decode: the token is rejected unless it is
+ * signed by the project's key and unexpired. It is what Supabase recommends
+ * over `getUser()` for projects on asymmetric signing keys, which this one is
+ * (JWKS serves an ES256 key).
+ *
+ * Session refresh is unaffected. Middleware owns it, and it must — the cookie
+ * jar is read-only in a Server Component, which is why `setAll` in
+ * `lib/supabase/server.ts` silently discards writes.
+ *
+ * Falls back to `getUser()` if verification cannot be done locally: a project
+ * moved back to a symmetric secret, a runtime without WebCrypto, or an
+ * unreachable JWKS endpoint. Slower, but never wrong.
+ */
+async function resolveAuthIdentity(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+): Promise<AuthIdentity | null> {
+  try {
+    const { data, error } = await supabase.auth.getClaims();
+
+    if (!error) {
+      const claims = data?.claims;
+      // No claims and no error means there is genuinely no session.
+      if (!claims?.sub) return null;
+      return {
+        id: claims.sub,
+        email: typeof claims.email === "string" ? claims.email : null,
+        metadata: (claims.user_metadata ?? {}) as Record<string, unknown>,
+      };
+    }
+  } catch (err) {
+    console.error("getClaims failed, falling back to getUser", err);
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    metadata: (user.user_metadata ?? {}) as Record<string, unknown>,
+  };
+}
+
 /**
  * Mirror a Supabase auth user into our domain `users` table (read-first; write
  * only when a mirrored field drifts) and return the `SessionUser`. Shared by
@@ -97,19 +157,17 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const identity = await resolveAuthIdentity(supabase);
+  if (!identity) return null;
 
   // Mirror the Supabase auth user into our domain table (read-first; write only when needed).
   const name =
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
+    (identity.metadata.full_name as string | undefined) ??
+    (identity.metadata.name as string | undefined) ??
     null;
-  const image = (user.user_metadata?.avatar_url as string | undefined) ?? null;
+  const image = (identity.metadata.avatar_url as string | undefined) ?? null;
 
-  return mirrorSupabaseUser({ id: user.id, email: user.email, name, image });
+  return mirrorSupabaseUser({ id: identity.id, email: identity.email, name, image });
 });
 
 export async function requireUser(): Promise<SessionUser> {

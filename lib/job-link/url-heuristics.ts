@@ -1,10 +1,18 @@
 import type { ParsedJobFields } from "@/lib/job-link/types";
 import { cleanText, parseTitleTag, slugToLabel } from "@/lib/job-link/text-utils";
 
-const BRAND_COMPANY_NAMES: Record<string, string> = {
+/**
+ * Prototype-less on purpose — same hazard as BRAND_DOMAINS in lib/company-logo.ts.
+ * These keys are hostnames and path slugs taken straight from a pasted job URL.
+ * A key colliding with an `Object.prototype` member (`constructor`, `toString`,
+ * `valueOf`, `hasOwnProperty`) would otherwise resolve to an inherited function
+ * rather than a miss, and neither `??` nor `in` catches that: `Object` is not
+ * nullish, and `in` walks the prototype chain too.
+ */
+const BRAND_COMPANY_NAMES: Record<string, string> = Object.assign(Object.create(null), {
   tesla: "Tesla",
   onezero: "OneZero",
-};
+});
 
 function companyFromHostname(host: string): string | undefined {
   const hostParts = host.split(".");

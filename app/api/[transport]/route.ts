@@ -63,6 +63,8 @@ function buildQuery(input: {
     statuses: input.statuses ?? [],
     sort: input.sort ?? "applicationDate",
     dir: input.dir ?? "desc",
+    // MCP tools operate on logged applications only; the queue is web-UI only.
+    tab: "applications",
   };
 }
 

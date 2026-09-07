@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMotivationStore } from "@/stores/motivation-store";
+import { EASE_OUT } from "@/lib/motion";
 import { JOBS_QUOTES } from "@/content/jobs-quotes";
 
 export function JobsOverlay() {
@@ -37,7 +38,7 @@ export function JobsOverlay() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: reduce ? 0.15 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: reduce ? 0.15 : 0.5, ease: EASE_OUT }}
           onClick={dismiss}
           className="fixed inset-0 z-[80] flex cursor-pointer items-center justify-center bg-black/40 backdrop-blur-3xl"
           role="dialog"
@@ -50,7 +51,7 @@ export function JobsOverlay() {
             initial={{ scale: reduce ? 1 : 1.08, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: reduce ? 1 : 1.04, opacity: 0 }}
-            transition={{ duration: reduce ? 0.15 : 1.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: reduce ? 0.15 : 1.2, ease: EASE_OUT }}
           >
             <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_30%_20%,#2a2a3e_0%,#15151f_45%,#000_100%)]" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30" />
@@ -62,7 +63,7 @@ export function JobsOverlay() {
             initial={{ opacity: 0, y: reduce ? 0 : 20, scale: reduce ? 1 : 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: reduce ? 0 : -10, scale: reduce ? 1 : 0.98 }}
-            transition={{ delay: reduce ? 0 : 0.25, duration: reduce ? 0.15 : 0.7, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ delay: reduce ? 0 : 0.25, duration: reduce ? 0.15 : 0.7, ease: EASE_OUT }}
             className="relative z-10 mx-4 max-w-2xl px-6 text-center"
           >
             <blockquote className="text-balance text-2xl font-medium leading-snug tracking-tight text-white sm:text-3xl md:text-4xl">

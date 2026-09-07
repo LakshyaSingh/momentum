@@ -2,12 +2,13 @@
 
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { type ReactNode } from "react";
+import { DURATION_AMBIENT, EASE_OUT } from "@/lib/motion";
 
 type ScrollRevealProps = {
   children: ReactNode;
   className?: string;
   delay?: number;
-  /** How far the element travels in (px). Default 32. */
+  /** How far the element travels in (px). Default 16. */
   distance?: number;
   /** "up" — flies up from below (default). "down" — drops in. "left"/"right" — slides. */
   direction?: "up" | "down" | "left" | "right";
@@ -37,7 +38,7 @@ export function ScrollReveal({
   children,
   className,
   delay = 0,
-  distance = 32,
+  distance = 16,
   direction = "up",
   as = "div",
   amount = 0,
@@ -69,9 +70,16 @@ export function ScrollReveal({
           x: 0,
           y: 0,
           transition: {
-            duration: 0.75,
+            /*
+             * This wrapper is on every authenticated page, and it replays each
+             * time an element scrolls back into view, so the same motion is
+             * seen dozens of times a day. At that frequency the budget is
+             * near-imperceptible: a short settle that softens the arrival,
+             * not a slide the user waits through. It was 750ms over 32px.
+             */
+            duration: DURATION_AMBIENT,
             delay,
-            ease: [0.16, 1, 0.3, 1],
+            ease: EASE_OUT,
           },
         },
       };

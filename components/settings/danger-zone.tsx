@@ -50,7 +50,9 @@ export function DangerZone() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-medium">Delete all applications</p>
-          <p className="text-sm text-muted-foreground">Keep your account, drop the data.</p>
+          <p className="text-sm text-muted-foreground">
+            Keep your account, drop the data. Your queue is kept.
+          </p>
         </div>
         <Button variant="outline" onClick={clearAll} disabled={pending}>
           <Trash2 className="size-4" /> Delete data
@@ -62,7 +64,9 @@ export function DangerZone() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-medium">Delete account</p>
-          <p className="text-sm text-muted-foreground">Wipes your profile, applications, and tags. Everything.</p>
+          <p className="text-sm text-muted-foreground">
+            Wipes your profile, applications, queued jobs, and tags. Everything.
+          </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

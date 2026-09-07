@@ -115,7 +115,15 @@ export function suggestMapping(headers: string[]): Record<string, SchemaField> {
   return mapping;
 }
 
-const STATUS_ALIASES: Record<string, ApplicationStatus> = {
+/**
+ * Prototype-less on purpose — same hazard as BRAND_DOMAINS in lib/company-logo.ts.
+ * These keys are status cells from an imported spreadsheet.
+ * A key colliding with an `Object.prototype` member (`constructor`, `toString`,
+ * `valueOf`, `hasOwnProperty`) would otherwise resolve to an inherited function
+ * rather than a miss, and neither `??` nor `in` catches that: `Object` is not
+ * nullish, and `in` walks the prototype chain too.
+ */
+const STATUS_ALIASES: Record<string, ApplicationStatus> = Object.assign(Object.create(null), {
   applied: "APPLIED",
   submitted: "APPLIED",
   oa: "OA",
@@ -137,7 +145,7 @@ const STATUS_ALIASES: Record<string, ApplicationStatus> = {
   ghosted: "GHOSTED",
   withdrawn: "WITHDRAWN",
   withdrew: "WITHDRAWN",
-};
+});
 
 export function normalizeStatus(value: unknown): ApplicationStatus {
   if (typeof value !== "string") return "APPLIED";

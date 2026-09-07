@@ -1,5 +1,6 @@
 "use client";
 
+import { EASE_OUT } from "@/lib/motion";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -64,7 +65,7 @@ export function JobsQuoteBar() {
           initial={{ opacity: 0, y: reduce ? 0 : -8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: reduce ? 0 : -8 }}
-          transition={{ duration: reduce ? 0.15 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: reduce ? 0.15 : 0.55, ease: EASE_OUT }}
           className="pointer-events-auto w-full max-w-2xl"
         >
           <MomentumGlass

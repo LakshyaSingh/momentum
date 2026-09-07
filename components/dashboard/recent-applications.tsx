@@ -1,5 +1,6 @@
 "use client";
 
+import { EASE_OUT } from "@/lib/motion";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -8,6 +9,7 @@ import { GlassCard } from "@/components/glass/glass-card";
 import { CompanyLogo } from "@/components/applications/company-logo";
 import { StatusPill } from "@/components/applications/status-pill";
 import { ApplicationSheet } from "@/components/applications/application-sheet";
+import { useRetained } from "@/lib/hooks/use-retained";
 import { formatRelative } from "@/lib/utils";
 import type { ApplicationRow } from "@/components/applications/data-table";
 import {
@@ -18,6 +20,9 @@ import {
 export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
   const [localRows, setLocalRows] = useState(rows);
   const [editing, setEditing] = useState<ApplicationRow | null>(null);
+  // Retained so the sheet can finish its slide-out instead of being unmounted
+  // the moment `editing` clears. See useRetained.
+  const sheetRow = useRetained(editing);
 
   useEffect(() => {
     setLocalRows(rows);
@@ -42,12 +47,12 @@ export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
               key={row.id}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ delay: i * 0.04, duration: 0.3, ease: EASE_OUT }}
             >
               <button
                 type="button"
                 onClick={() => setEditing(row)}
-                className="-mx-3 flex w-[calc(100%+1.5rem)] items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-background/40 md:items-center"
+                className="-mx-3 flex w-[calc(100%+1.5rem)] touch-manipulation items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-background/40 active:bg-background/70 md:items-center"
               >
                 <CompanyLogo
                   company={row.company}
@@ -74,21 +79,20 @@ export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
           ))}
         </ul>
       )}
-      {editing && (
+      {sheetRow && (
         <ApplicationSheet
           open={!!editing}
           onOpenChange={(open) => !open && setEditing(null)}
           mode={{
             kind: "edit",
-            id: editing.id,
-            defaults: applicationRowToFormDefaults(editing),
+            id: sheetRow.id,
+            defaults: applicationRowToFormDefaults(sheetRow),
           }}
           onSaved={(values) => {
             const patch = applicationInputToRowPatch(values);
             setLocalRows((prev) =>
-              prev.map((row) => (row.id === editing.id ? { ...row, ...patch } : row)),
+              prev.map((row) => (row.id === sheetRow.id ? { ...row, ...patch } : row)),
             );
-            setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
           }}
         />
       )}

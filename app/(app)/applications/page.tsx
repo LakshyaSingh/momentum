@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { QuickAdd } from "@/components/applications/quick-add";
-import { ApplicationsView } from "@/components/applications/applications-view";
-import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { ApplicationsTabsView } from "@/components/applications/applications-tabs-view";
 import { DeclarativeGlassSceneRegistration } from "@/components/glass/declarative-glass-scene";
 import { ApplicationsGlassScene } from "@/components/glass/primary-route-glass-scenes";
 import {
@@ -13,6 +12,7 @@ import {
   parseApplicationsQuery,
   toApplicationRow,
 } from "@/lib/applications-list";
+import { toQueuedJobRow } from "@/lib/queued-jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -25,57 +25,57 @@ export default async function ApplicationsPage({
   const params = await searchParams;
   const query = parseApplicationsQuery(params);
   const where = buildApplicationsWhere(user.id, query);
-  const hasFilters = Boolean(query.search || query.statuses.length);
+  const isFiltered = Boolean(query.search || query.statuses.length);
 
-  const [filteredTotal, totalAll] = await Promise.all([
-    prisma.application.count({ where }),
-    prisma.application.count({ where: { userId: user.id } }),
-  ]);
+  // The pooled DATABASE_URL runs with connection_limit=1, so Promise.all here
+  // buys nothing — these execute back to back regardless. Issue the smallest
+  // number of queries instead: with no filter applied the two counts are the
+  // same number, and the queue is small enough that findMany doubles as a count.
+  const totalAll = await prisma.application.count({ where: { userId: user.id } });
+  const filteredTotal = isFiltered ? await prisma.application.count({ where }) : totalAll;
 
   const page = clampApplicationsPage(query.page, filteredTotal, query.pageSize);
   const skip = (page - 1) * query.pageSize;
 
+  // Both lists load up front so the Applied/Queue toggle never touches the
+  // network — see ApplicationsTabsView.
   const apps = await prisma.application.findMany({
     where,
     orderBy: applicationsOrderBy({ ...query, page }),
     skip,
     take: query.pageSize,
   });
+  const queuedJobs = await prisma.queuedJob.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
 
   const rows = apps.map(toApplicationRow);
+  const queuedRows = queuedJobs.map(toQueuedJobRow);
+  const queuedCount = queuedRows.length;
 
   return (
     <div className="space-y-8">
       <DeclarativeGlassSceneRegistration id="applications">
         <ApplicationsGlassScene
           rows={rows}
+          queuedRows={queuedRows}
           total={totalAll}
           filteredTotal={filteredTotal}
+          queuedCount={queuedCount}
           query={{ ...query, page }}
         />
       </DeclarativeGlassSceneRegistration>
-      <ScrollReveal as="header" className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-display-md font-semibold tracking-tight">Applications</h1>
-          <p className="mt-1 text-muted-foreground">
-            {totalAll === 0
-              ? "Log your first application. Momentum starts now."
-              : `${totalAll} ${totalAll === 1 ? "application" : "applications"}, all in one place.`}
-          </p>
-        </div>
-        <QuickAdd />
-      </ScrollReveal>
-
-      <ScrollReveal delay={0.05}>
-        <Suspense fallback={null}>
-          <ApplicationsView
-            serverRows={rows}
-            filteredTotal={filteredTotal}
-            totalAll={totalAll}
-            query={{ ...query, page }}
-          />
-        </Suspense>
-      </ScrollReveal>
+      <Suspense fallback={null}>
+        <ApplicationsTabsView
+          rows={rows}
+          queuedRows={queuedRows}
+          filteredTotal={filteredTotal}
+          totalAll={totalAll}
+          query={{ ...query, page }}
+          quickAdd={<QuickAdd />}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -18,7 +18,14 @@ import {
   statusColor,
 } from "@/components/applications/status-pill";
 import type { ApplicationRow } from "@/components/applications/data-table";
-import type { ApplicationsQuery } from "@/lib/applications-list";
+import type { ApplicationsQuery, ApplicationsTab } from "@/lib/applications-list";
+import {
+  canApplyDirectly,
+  daysWaiting,
+  queuedJobLabel,
+  waitingLabel,
+  type QueuedJobRow,
+} from "@/lib/queued-jobs";
 import type {
   FunnelStage,
   ProductivityStats,
@@ -66,18 +73,120 @@ function ScenePrimaryAction() {
   );
 }
 
+/**
+ * Inert copy of the tab strip.
+ *
+ * The floating nav sits directly over this row, so if the real page has tabs
+ * and the scene does not, the refraction visibly diverges from the page
+ * underneath it. Geometry has to match `SegmentedControl`, including the pill
+ * padding and the active thumb.
+ */
+function SceneTabStrip({
+  tab,
+  queuedCount,
+}: {
+  tab: ApplicationsTab;
+  queuedCount: number;
+}) {
+  const options: { value: ApplicationsTab; label: string }[] = [
+    { value: "applications", label: "Applied" },
+    { value: "queue", label: queuedCount > 0 ? `To apply · ${queuedCount}` : "To apply" },
+  ];
+
+  return (
+    <div className="inline-flex glass-nav p-1">
+      {options.map((opt) => (
+        <span
+          key={opt.value}
+          className={
+            opt.value === tab
+              ? "relative inline-flex items-center justify-center rounded-full bg-foreground px-4 py-1.5 text-sm font-medium tracking-tight text-background"
+              : "relative inline-flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-medium tracking-tight text-muted-foreground"
+          }
+        >
+          {opt.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function QueueGlassScene({ rows }: { rows: QueuedJobRow[] }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="flex h-11 flex-1 items-center rounded-xl border border-input bg-background/40 px-3.5 text-sm text-muted-foreground">
+          Paste a job link and press Enter
+        </div>
+        <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-medium text-background">
+          <Plus className="size-4" />
+          Queue
+        </span>
+      </div>
+
+      {rows.length === 0 ? (
+        <SceneCard className="p-10 text-center">
+          <p className="text-sm font-medium">Nothing queued</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Paste a job link above while you&rsquo;re browsing. Apply to them all in
+            one sitting later.
+          </p>
+        </SceneCard>
+      ) : (
+        <SceneCard className="overflow-hidden p-0">
+          <ul className="divide-y divide-border/60">
+            {rows.map((row) => (
+              <li key={row.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-background/60 text-xs font-medium uppercase ring-1 ring-border/40">
+                  {queuedJobLabel(row).slice(0, 2)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-medium">
+                      {queuedJobLabel(row)}
+                    </span>
+                    <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/60" />
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {row.role?.trim() || "No role yet"}
+                    {row.location ? ` · ${row.location}` : ""}
+                  </p>
+                </div>
+                <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
+                  {waitingLabel(daysWaiting(row.createdAt))}
+                </span>
+                <span className="inline-flex h-8 items-center rounded-full bg-foreground px-4 text-xs font-medium text-background">
+                  {canApplyDirectly(row) ? "Mark as applied" : "Add details"}
+                </span>
+                <span className="inline-flex size-8 items-center justify-center">
+                  <MoreHorizontal className="size-4" />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </SceneCard>
+      )}
+    </div>
+  );
+}
+
 export function ApplicationsGlassScene({
   rows,
+  queuedRows,
   total,
   filteredTotal,
+  queuedCount,
   query,
 }: {
   rows: ApplicationRow[];
+  queuedRows: QueuedJobRow[];
   total: number;
   filteredTotal: number;
+  queuedCount: number;
   query: ApplicationsQuery;
 }) {
   const filtered = Boolean(query.search || query.statuses.length);
+  const isQueue = query.tab === "queue";
 
   return (
     <PrimaryGlassSceneFrame>
@@ -86,15 +195,25 @@ export function ApplicationsGlassScene({
           <div>
             <h1 className="text-display-md font-semibold tracking-tight">Applications</h1>
             <p className="mt-1 text-muted-foreground">
-              {total === 0
-                ? "Log your first application. Momentum starts now."
-                : `${total} ${total === 1 ? "application" : "applications"}, all in one place.`}
+              {isQueue
+                ? queuedCount === 0
+                  ? "Collect links now, apply to them in one sitting."
+                  : `${queuedCount} waiting to be applied to.`
+                : total === 0
+                  ? "Log your first application. Momentum starts now."
+                  : `${total} ${total === 1 ? "application" : "applications"}, all in one place.`}
             </p>
           </div>
           <ScenePrimaryAction />
         </header>
 
         <div className="space-y-4">
+          <SceneTabStrip tab={query.tab} queuedCount={queuedCount} />
+
+          {isQueue ? (
+            <QueueGlassScene rows={queuedRows} />
+          ) : (
+            <>
           <div className="space-y-3">
             <div className="flex h-11 items-center rounded-md border border-input bg-background/40 px-4 text-sm text-muted-foreground">
               <Search className="mr-3 size-4" />
@@ -169,6 +288,8 @@ export function ApplicationsGlassScene({
               </tbody>
             </table>
           </SceneCard>
+            </>
+          )}
         </div>
       </div>
     </PrimaryGlassSceneFrame>

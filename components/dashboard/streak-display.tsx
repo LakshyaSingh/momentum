@@ -15,11 +15,9 @@ export function StreakDisplay({
   return (
     <GlassCard className="relative overflow-hidden p-6">
       {current > 0 && (
-        <motion.div
+        <div
           aria-hidden
-          className="pointer-events-none absolute -right-12 -top-12 size-48 rounded-full bg-orange-500/20 blur-3xl"
-          animate={{ opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="pointer-events-none absolute -right-12 -top-12 size-48 rounded-full bg-orange-500/20 opacity-60 blur-3xl"
         />
       )}
       <div className="flex items-start justify-between">

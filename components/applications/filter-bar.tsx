@@ -59,7 +59,7 @@ export function FilterBar({ filters, onChange, total, showing }: FilterBarProps)
               type="button"
               onClick={() => toggleStatus(s)}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-[background-color,border-color,color] duration-150",
                 active
                   ? "border-foreground/20 bg-foreground/5"
                   : "border-border bg-background/40 text-muted-foreground hover:bg-background/70",

@@ -33,7 +33,7 @@ export function UploadDropzone({ onFile, className }: UploadDropzoneProps) {
       <div
         {...getRootProps()}
         className={cn(
-          "glass-panel grain relative cursor-pointer overflow-hidden p-8 text-center transition-all hover:scale-[1.005] active:scale-[0.995]",
+          "glass-panel grain relative cursor-pointer overflow-hidden p-8 text-center transition-[transform,border-color,background-color] duration-200 hover:scale-[1.005] active:scale-[0.995]",
           isDragActive && "ring-2 ring-foreground/30",
         )}
       >

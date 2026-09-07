@@ -53,6 +53,12 @@ function startOfDay(d: Date) {
   return c;
 }
 
+function daysAgo(n: number) {
+  const c = startOfDay(new Date());
+  c.setDate(c.getDate() - n);
+  return c;
+}
+
 async function main() {
   console.log("Seeding demo user…");
 
@@ -68,6 +74,37 @@ async function main() {
 
   // Wipe existing demo data so seed is idempotent.
   await prisma.application.deleteMany({ where: { userId: user.id } });
+  await prisma.queuedJob.deleteMany({ where: { userId: user.id } });
+
+  // A few jobs sitting in the queue, so the tab isn't empty in a fresh demo.
+  // These deliberately do NOT contribute to the streak, heatmap, or funnel.
+  await prisma.queuedJob.createMany({
+    data: [
+      {
+        userId: user.id,
+        company: "Ramp",
+        companyDomain: "ramp.com",
+        role: "Senior Product Engineer",
+        location: "New York, NY",
+        jobLink: "https://jobs.ashbyhq.com/ramp/00000000-0000-0000-0000-000000000001",
+        createdAt: daysAgo(6),
+      },
+      {
+        userId: user.id,
+        company: "Linear",
+        companyDomain: "linear.app",
+        role: "Product Engineer",
+        location: "Remote",
+        jobLink: "https://jobs.ashbyhq.com/linear/00000000-0000-0000-0000-000000000002",
+        createdAt: daysAgo(2),
+      },
+      {
+        userId: user.id,
+        jobLink: "https://boards.greenhouse.io/example/jobs/0000001",
+        createdAt: new Date(),
+      },
+    ],
+  });
 
   const today = startOfDay(new Date());
   const applications: Prisma.ApplicationCreateManyInput[] = [];

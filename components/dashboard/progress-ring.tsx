@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { clamp } from "@/lib/utils";
+import { EASE_OUT } from "@/lib/motion";
 
 interface ProgressRingProps {
   /** Value in 0..max */
@@ -56,7 +57,7 @@ export function ProgressRing({
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: reduce ? 0 : 1.1, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: reduce ? 0 : 1.1, ease: EASE_OUT }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">

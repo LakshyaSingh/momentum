@@ -35,7 +35,7 @@ export default async function SettingsPage() {
           <div>
             <h2 className="text-base font-semibold tracking-tight">Your data</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Export everything as a CSV. You always own your applications.
+              Export your applications as a CSV. You always own your data.
             </p>
           </div>
           <Separator className="my-5" />

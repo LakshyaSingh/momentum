@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/glass/glass-card";
+import { DURATION_STANDARD, EASE_OUT } from "@/lib/motion";
 
 interface TopCompaniesProps {
   rows: { company: string; total: number; positive: number; rate: number }[];
@@ -33,7 +34,7 @@ export function TopCompanies({ rows }: TopCompaniesProps) {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(row.total / max) * 100}%` }}
-                  transition={{ duration: 0.8, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: DURATION_STANDARD, delay: i * 0.05, ease: EASE_OUT }}
                   className="h-full rounded-full bg-foreground"
                 />
               </div>

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/glass/glass-card";
 import type { FunnelStage } from "@/lib/analytics";
+import { DURATION_STANDARD, EASE_OUT } from "@/lib/motion";
 
 const STAGE_COLORS: Record<string, string> = {
   applied: "hsl(var(--status-applied))",
@@ -49,7 +50,7 @@ export function FunnelChart({ stages }: { stages: FunnelStage[] }) {
                   <motion.div
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: fraction }}
-                    transition={{ duration: 0.8, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: DURATION_STANDARD, delay: i * 0.08, ease: EASE_OUT }}
                     style={{
                       transformOrigin: "left",
                       background: STAGE_COLORS[s.key],

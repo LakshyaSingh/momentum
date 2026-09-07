@@ -13,13 +13,21 @@
 import type { StructuredSalary } from "@/lib/job-link/internal";
 import { repairSplitNumberCommas } from "@/lib/job-link/field-validators";
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
+/**
+ * Prototype-less on purpose — same hazard as BRAND_DOMAINS in lib/company-logo.ts.
+ * These keys are symbols and codes scraped out of a third-party page.
+ * A key colliding with an `Object.prototype` member (`constructor`, `toString`,
+ * `valueOf`, `hasOwnProperty`) would otherwise resolve to an inherited function
+ * rather than a miss, and neither `??` nor `in` catches that: `Object` is not
+ * nullish, and `in` walks the prototype chain too.
+ */
+const CURRENCY_SYMBOLS: Record<string, string> = Object.assign(Object.create(null), {
   $: "USD",
   "£": "GBP",
   "€": "EUR",
   "¥": "JPY",
   "₹": "INR",
-};
+});
 
 const CURRENCY_CODES = new Set([
   "USD",
@@ -235,7 +243,7 @@ function pickBestRange(candidates: StructuredSalary[]): StructuredSalary {
   })[0]!;
 }
 
-const CURRENCY_PREFIX: Record<string, string> = {
+const CURRENCY_PREFIX: Record<string, string> = Object.assign(Object.create(null), {
   USD: "$",
   CAD: "CA$",
   AUD: "A$",
@@ -248,7 +256,7 @@ const CURRENCY_PREFIX: Record<string, string> = {
   CHF: "CHF ",
   MXN: "MX$",
   BRL: "R$",
-};
+});
 
 const INTERVAL_SUFFIX: Record<StructuredSalary["interval"], string> = {
   yearly: "/yr",

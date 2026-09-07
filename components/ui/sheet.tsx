@@ -51,25 +51,71 @@ interface SheetContentProps
 export const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, children, ...props }, ref) => {
+  // A state-backed callback ref, not useRef: the glass package does not render
+  // its children in the first commit, so a ref read during mount's layout
+  // effect is still null. Storing the node in state re-runs the effect at the
+  // moment it actually attaches.
+  const [scroller, setScroller] = React.useState<HTMLDivElement | null>(null);
+  const [lensOff, setLensOff] = React.useState(false);
+
+  /*
+   * A sheet keeps its lens when its content fits, and drops it once the content
+   * has to scroll — the only case where the displacement graph is re-evaluated
+   * per frame and costs dropped frames. See `.glass-lens-off` in globals.css
+   * for the measurements.
+   *
+   * Latching via an observer, not a one-shot read. Two things defeat a single
+   * measurement at mount: the scroller does not exist yet (the glass package
+   * renders children after its own first commit), and even once it does, the
+   * lens is a flex column whose height resolves later still. The observer
+   * catches the overflow whenever layout actually settles.
+   *
+   * It only ever latches ON. Content grows as the user types into the notes
+   * field, and a rim that popped in and out mid-edit would be more distracting
+   * than either state on its own. Toggling a class (rather than swapping the
+   * glass component) means this never remounts the form.
+   */
+  React.useLayoutEffect(() => {
+    if (!scroller) return;
+
+    const check = () => {
+      if (scroller.scrollHeight > scroller.clientHeight + 1) setLensOff(true);
+    };
+
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(scroller);
+    if (scroller.firstElementChild) observer.observe(scroller.firstElementChild);
+    return () => observer.disconnect();
+  }, [scroller]);
+
+  return (
   <SheetPortal>
     <SheetOverlay />
     <DialogPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
       <MomentumGlass
         variant="sheet"
-        className="native-liquid-glass glass-panel grain relative flex h-full max-h-[inherit] min-h-0 w-full flex-col overflow-hidden"
+        className={cn(
+          "native-liquid-glass glass-panel grain relative flex h-full max-h-[inherit] min-h-0 w-full flex-col overflow-hidden",
+          lensOff && "glass-lens-off",
+        )}
       >
         <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-full opacity-60 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring/40">
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
-        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] sm:p-8">
+        <div
+          ref={setScroller}
+          className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] sm:p-8"
+        >
           {children}
         </div>
       </MomentumGlass>
     </DialogPrimitive.Content>
   </SheetPortal>
-));
+  );
+});
 SheetContent.displayName = DialogPrimitive.Content.displayName;
 
 export function SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

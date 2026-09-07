@@ -12,7 +12,12 @@ export const runtime = "nodejs";
 
 const CACHE_MAX_AGE = 60 * 60 * 24 * 7;
 const STALE_WHILE_REVALIDATE = 60 * 60 * 24;
-const MIN_BODY_BYTES = 1024;
+/*
+ * A byte floor is only a crude placeholder filter — PLACEHOLDER_HASHES below is
+ * the precise one. 1 KB was high enough to reject legitimate favicons (Google
+ * serves stripe.com at 580 bytes), which sent real companies to initials.
+ */
+const MIN_BODY_BYTES = 512;
 const MIN_VERIFIED_BODY_BYTES = 32;
 
 const PLACEHOLDER_HASHES = new Set([
@@ -22,8 +27,18 @@ const PLACEHOLDER_HASHES = new Set([
   "cfe7012e619cad3303d88676776006bef3fcb7ec68e3b99b53eabce8b47fb38e",
 ]);
 
+/*
+ * logo.clearbit.com was retired after the HubSpot acquisition and no longer
+ * resolves at all — verified 2026-09-05, `curl` returns 000 (connection
+ * failure) for linear.app, stripe.com and constructor.com, while both
+ * providers below return real images for all three. Leaving it first in the
+ * list spent a dead round trip on every candidate domain before a working
+ * provider was tried.
+ *
+ * Clearbit's *autocomplete* endpoint is a different service and is still live;
+ * lib/company-lookup.ts uses it to turn a company name into a domain.
+ */
 const LOGO_SOURCES = [
-  (domain: string) => `https://logo.clearbit.com/${domain}`,
   (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
   (domain: string) => `https://icons.duckduckgo.com/ip3/${domain}.ico`,
 ];
