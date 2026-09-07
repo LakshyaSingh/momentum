@@ -15,6 +15,7 @@ import { FunnelChart } from "./funnel-chart";
 import { ProductivityCards } from "./productivity-cards";
 import type { FunnelStage, ProductivityStats } from "@/lib/analytics";
 import type { ApplicationStatus } from "@prisma/client";
+import { EASE_OUT } from "@/lib/motion";
 
 interface AnalyticsClientProps {
   /** Raw applications transferred to the client; we filter & bucket here so toggles are instant. */
@@ -51,7 +52,7 @@ export function AnalyticsClient({ applications, funnel, productivity }: Analytic
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.25, ease: EASE_OUT }}
           className="space-y-6"
         >
           <ApplicationsOverTime data={series} range={rangeLabel(range)} />

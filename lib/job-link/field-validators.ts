@@ -1,4 +1,3 @@
-import type { ParsedJobFields } from "@/lib/job-link/types";
 
 const RECRUITER_STOP_PHRASES =
   /learn more|click here|contact us|see more|show more|view profile|sign in|apply now/i;
@@ -258,25 +257,6 @@ export function normalizeRecruiter(value: string | undefined): string | undefine
 
 export function normalizeNotes(value: string | undefined, url?: string): string | undefined {
   return cleanJobNotes(value, url);
-}
-
-export function sanitizeParsedFields(
-  fields: ParsedJobFields,
-  url: string,
-  titleFallback?: ParsedJobFields,
-): ParsedJobFields {
-  const fallback = titleFallback ?? {};
-
-  return {
-    role: fields.role,
-    company: fields.company,
-    location:
-      normalizeLocation(fields.location) ??
-      normalizeLocation(fallback.location),
-    salary: normalizeSalary(fields.salary),
-    recruiter: normalizeRecruiter(fields.recruiter),
-    notes: normalizeNotes(fields.notes, url),
-  };
 }
 
 export function firstLikelyRecruiterName(candidates: Array<string | undefined>): string | undefined {

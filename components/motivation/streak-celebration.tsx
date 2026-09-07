@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Flame } from "lucide-react";
 import { useMotivationStore } from "@/stores/motivation-store";
+import { EASE_OUT } from "@/lib/motion";
 
 const MILESTONE_COPY: Record<number, { title: string; sub: string }> = {
   3: { title: "Three days in a row.", sub: "A habit is forming." },
@@ -102,7 +103,7 @@ function Confetti() {
             opacity: [0, 1, 1, 0],
             rotate: p.rotate,
           }}
-          transition={{ duration: 1.6, delay: p.delay, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.6, delay: p.delay, ease: EASE_OUT }}
           style={{
             background: p.color,
             width: p.size,

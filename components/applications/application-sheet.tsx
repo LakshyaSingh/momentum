@@ -16,12 +16,19 @@ interface ApplicationSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode:
-    | { kind: "create" }
+    | { kind: "create"; defaults?: Partial<ApplicationInput> }
     | { kind: "edit"; id: string; defaults: Partial<ApplicationInput> };
   onSaved?: (patch: Partial<ApplicationInput>) => void;
+  onCreated?: (id: string) => void;
 }
 
-export function ApplicationSheet({ open, onOpenChange, mode, onSaved }: ApplicationSheetProps) {
+export function ApplicationSheet({
+  open,
+  onOpenChange,
+  mode,
+  onSaved,
+  onCreated,
+}: ApplicationSheetProps) {
   const isDesktop = useMediaQuery("(min-width: 640px)");
   const contentRef = useRef<HTMLDivElement>(null);
   const side = isDesktop ? "right" : "bottom";
@@ -60,6 +67,7 @@ export function ApplicationSheet({ open, onOpenChange, mode, onSaved }: Applicat
             autoFocusJobLink={isDesktop}
             onDone={() => onOpenChange(false)}
             onSaved={onSaved}
+            onCreated={onCreated}
           />
         </div>
       </SheetContent>

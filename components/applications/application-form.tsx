@@ -32,18 +32,27 @@ import {
   warmApplicationsNavigation,
 } from "@/lib/applications-index-client";
 
-type Mode = { kind: "create" } | { kind: "edit"; id: string; defaults: Partial<ApplicationInput> };
+type Mode =
+  | { kind: "create"; defaults?: Partial<ApplicationInput> }
+  | { kind: "edit"; id: string; defaults: Partial<ApplicationInput> };
 
 export function ApplicationForm({
   mode,
   autoFocusJobLink = true,
   onDone,
   onSaved,
+  onCreated,
 }: {
   mode: Mode;
   autoFocusJobLink?: boolean;
   onDone?: () => void;
+  /** Edit only — receives the validated values after a successful update. */
   onSaved?: (patch: Partial<ApplicationInput>) => void;
+  /**
+   * Create only — receives the new application id after a successful create.
+   * Used by the queue to drop its row once the job has actually been applied to.
+   */
+  onCreated?: (id: string) => void;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -57,6 +66,7 @@ export function ApplicationForm({
       : {
           status: ApplicationStatus.APPLIED,
           applicationDate: new Date(),
+          ...mode.defaults,
         };
 
   const {
@@ -77,43 +87,76 @@ export function ApplicationForm({
 
   function onSubmit(values: ApplicationInput) {
     setServerError(null);
+
+    if (mode.kind === "edit") {
+      saveEdit(values, mode.id);
+      return;
+    }
+
     start(async () => {
-      if (mode.kind === "create") {
-        const res = await createApplication(values);
-        if (!res.ok) {
-          setServerError(res.error);
-          toast.error(res.error);
-          return;
-        }
-        toast.success(`Logged ${values.company}`);
-        clearApplicationsIndexWarmCache();
-        try {
-          trigger({
-            quoteSeed: res.motivation.quoteId,
-            milestone: res.milestone,
-            streak: res.currentStreak,
-          });
-        } catch (err) {
-          console.error("Motivation overlay failed", err);
-        }
-        router.refresh();
-        warmApplicationsNavigation(router, { forceIndex: true });
-        onDone?.();
-      } else {
-        const res = await updateApplication({ id: mode.id, ...values });
-        if (!res.ok) {
-          setServerError(res.error);
-          toast.error(res.error);
-          return;
-        }
-        toast.success("Updated");
-        clearApplicationsIndexWarmCache();
-        onSaved?.(values);
-        router.refresh();
-        warmApplicationsNavigation(router, { forceIndex: true });
-        onDone?.();
+      const res = await createApplication(values);
+      if (!res.ok) {
+        setServerError(res.error);
+        toast.error(res.error);
+        return;
       }
+      toast.success(`Logged ${values.company}`);
+      clearApplicationsIndexWarmCache();
+      try {
+        trigger({
+          quoteSeed: res.motivation.quoteId,
+          milestone: res.milestone,
+          streak: res.currentStreak,
+        });
+      } catch (err) {
+        console.error("Motivation overlay failed", err);
+      }
+      onCreated?.(res.id);
+      router.refresh();
+      warmApplicationsNavigation(router, { forceIndex: true });
+      onDone?.();
     });
+  }
+
+  /**
+   * Optimistic save for an existing row: patch the list and start the sheet's
+   * exit animation now, then write.
+   *
+   * An edit is a decision the user has already made — most often a single
+   * status change — so holding the sheet open for the round trip makes the app
+   * feel slower than it is, and closing only once the server answers reads as a
+   * stall rather than as a save.
+   *
+   * Deliberately NOT inside `start()`. React keeps a transition pending until
+   * its async body settles, so a close scheduled inside one does not commit
+   * until the write returns — measured at ~2.5s against a dev server, which is
+   * the exact delay this is meant to remove. The transition still wraps the
+   * create path, where the form stays mounted and `pending` drives the button.
+   *
+   * The parent applies the same patch to its local row, so the new value is on
+   * screen immediately and no success toast is needed. On failure we say so and
+   * refresh, which puts the server's truth back into the row.
+   */
+  function saveEdit(values: ApplicationInput, id: string) {
+    onSaved?.(values);
+    onDone?.();
+    clearApplicationsIndexWarmCache();
+
+    void (async () => {
+      const res = await updateApplication({ id, ...values }).catch(() => ({
+        ok: false as const,
+        error: "Could not reach the server.",
+      }));
+
+      if (!res.ok) {
+        toast.error(res.error);
+        router.refresh();
+        return;
+      }
+
+      router.refresh();
+      warmApplicationsNavigation(router, { forceIndex: true });
+    })();
   }
 
   function applyParsedFields(fields: ParsedJobFields) {

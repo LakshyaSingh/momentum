@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { isoDateKey } from "@/lib/utils";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
 
@@ -56,12 +55,23 @@ export function WeekSparkline({ series }: WeekSparklineProps) {
                 className="flex h-24 w-full items-end rounded-md bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 aria-label={`${d.count} application${d.count === 1 ? "" : "s"} on ${dateLabel}`}
               >
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${h}%` }}
-                  transition={{ duration: 0.7, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                {/*
+                  * Deliberately not animated.
+                  *
+                  * These bars are the data, not decoration around it, and this
+                  * chart is on the dashboard — the most frequently seen surface
+                  * in the app. Growing them from zero on every single load
+                  * animates the value the user came to read, and at that
+                  * frequency there is no budget for it.
+                  *
+                  * It also removes a failure mode: any entrance that starts at
+                  * scaleY(0) renders an invisible bar whenever the animation
+                  * does not run — a backgrounded tab, a throttled frame loop —
+                  * and takes the minimum 2px baseline tick with it.
+                  */}
+                <div
                   className={`pointer-events-none w-full rounded-md ${isToday ? "bg-foreground" : "bg-foreground/15"}`}
-                  style={{ minHeight: 2 }}
+                  style={{ height: `${h}%`, minHeight: 2 }}
                 />
               </button>
             </div>

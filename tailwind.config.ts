@@ -2,6 +2,13 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
+  /*
+   * Gate every `hover:` utility behind `@media (hover: hover)`. A touch tap
+   * fires a synthetic hover, so ungated hover motion means a tapped row or
+   * card animates as though the pointer were resting on it and then stays
+   * stuck in that state until something else is touched.
+   */
+  future: { hoverOnlyWhenSupported: true },
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",

@@ -8,6 +8,7 @@ import {
 } from "@/lib/streak";
 import { totalApplicationsFromDailyCounts } from "@/lib/application-stats";
 import type { ApplicationRow } from "@/components/applications/data-table";
+import { toApplicationRow } from "@/lib/applications-list";
 
 export type DashboardSnapshot = {
   streaks: StreakInfo;
@@ -15,44 +16,6 @@ export type DashboardSnapshot = {
   recentRows: ApplicationRow[];
   weekTotal: number;
 };
-
-function toApplicationRow(a: {
-  id: string;
-  company: string;
-  companyDomain: string | null;
-  role: string;
-  location: string | null;
-  jobLink: string | null;
-  applicationDate: Date;
-  status: ApplicationRow["status"];
-  salary: string | null;
-  recruiter: string | null;
-  referral: string | null;
-  notes: string | null;
-  followUpDate: Date | null;
-  responseReceived: boolean;
-  interviewStage: string | null;
-  offerStatus: string | null;
-}): ApplicationRow {
-  return {
-    id: a.id,
-    company: a.company,
-    companyDomain: a.companyDomain,
-    role: a.role,
-    location: a.location,
-    jobLink: a.jobLink,
-    applicationDate: a.applicationDate.toISOString(),
-    status: a.status,
-    salary: a.salary,
-    recruiter: a.recruiter,
-    referral: a.referral,
-    notes: a.notes,
-    followUpDate: a.followUpDate ? a.followUpDate.toISOString() : null,
-    responseReceived: a.responseReceived,
-    interviewStage: a.interviewStage,
-    offerStatus: a.offerStatus,
-  };
-}
 
 async function loadDashboardSnapshot(
   userId: string,

@@ -509,6 +509,33 @@
     border-radius: inherit;
   }
 
+  /*
+   * Drop the displacement lens on a surface that scrolls, keeping its blur and
+   * saturation. Measured while scrolling the application sheet on a 14-inch
+   * DPR-2 ProMotion panel (1.43 Mpx of filtered device pixels):
+   *
+   *              median    p95      worst   frames over 60Hz budget
+   *   with lens  8.4ms     16.7ms   17.2ms  4 / 85
+   *   flat       8.3ms     9.1ms    9.4ms   0 / 85
+   *
+   * The median is unchanged either way — the cost is tail hitching, one frame
+   * in twenty taking two full 120Hz periods, which is what reads as sluggish
+   * scrolling. The same sheet on a DPR-1 external display never shows it,
+   * because backdrop-filter cost scales with device pixels and the sheet fits
+   * without scrolling there.
+   *
+   * Applied only when the content actually overflows: the cost is per-repaint,
+   * so a sheet that fits is filtered once and keeps its rim refraction.
+   *
+   * `!important` because the package writes its own backdrop-filter onto this
+   * element; values mirror OPTICS.sheet (frost 6, saturate 1.16) in
+   * components/glass/liquid-glass.tsx and must be changed alongside it.
+   */
+  .glass-lens-off {
+    backdrop-filter: blur(6px) saturate(1.16) !important;
+    -webkit-backdrop-filter: blur(6px) saturate(1.16) !important;
+  }
+
   .ring-shadow {
     box-shadow:
       inset 0 1px 0 0 rgba(255,255,255,0.7),
@@ -534,12 +561,63 @@
     mask-image: linear-gradient(to bottom, black 75%, transparent);
   }
 
+  /*
+   * prefers-contrast: more.
+   *
+   * The glass material is the accessibility problem here, not the palette. A
+   * translucent surface puts body text over whatever happens to be behind it,
+   * so its text contrast is not a fixed ratio we can guarantee — it depends on
+   * the page underneath. When the user asks for more contrast the honest answer
+   * is to stop refracting entirely: solid ground, one defined edge, no
+   * highlight gradients or grain competing with the text.
+   */
+  @media (prefers-contrast: more) {
+    .glass,
+    .glass-panel,
+    .glass-nav,
+    .glass-popover,
+    .glass-lens-off {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background: hsl(var(--background)) !important;
+      border: 1px solid hsl(var(--foreground) / 0.5) !important;
+    }
+
+    .glass::before,
+    .glass-panel::before,
+    .glass-nav::before,
+    .glass-popover::before,
+    .grain::after {
+      display: none !important;
+    }
+
+    .text-muted-foreground {
+      color: hsl(var(--foreground) / 0.85) !important;
+    }
+  }
+
+  /*
+   * Reduced motion is not "no feedback" — it is a non-vestibular equivalent.
+   *
+   * The usual blanket reset collapses *every* transition to 0.01ms, which also
+   * removes the hover, press and focus feedback that tells someone the
+   * interface heard them. That makes the app feel broken rather than calm, and
+   * it contradicts the reason the setting exists: what people are asking to
+   * avoid is motion through space, not state changes they can read.
+   *
+   * So keyframe animations stop, and transitions are narrowed to the properties
+   * that convey state without travelling. Transforms are dropped from the
+   * transition list, so a pressed row still darkens instantly while a sheet
+   * simply appears at its destination instead of sliding there.
+   */
   @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+      transition-property: opacity, color, background-color, border-color, fill, stroke !important;
+      transition-duration: 120ms !important;
+      transition-timing-function: ease !important;
     }
   }
 }
@@ -597,6 +675,41 @@
   .dark .glass-nav[data-glass-scene-mode="declarative"] {
     background-color: rgba(10, 10, 12, 0.58);
   }
+}
+
+/*
+ * Cards and panels inside the signed-in shell have nothing to filter.
+ *
+ * `AppBackground` paints one flat fill and `<main>` sits directly on it, so a
+ * card's backdrop is a single uniform colour. Blurring, saturating, or
+ * brightening a uniform colour returns that same colour — the filter is an
+ * identity operation that still forces the browser to re-rasterise the card's
+ * whole region every time anything inside it paints.
+ *
+ * That cost is invisible while the page is static and obvious while it is not:
+ * the daily-goal ring animates `stroke-dashoffset` for 1.1s and the counter
+ * ticks alongside it, so for the length of that animation every frame
+ * re-filtered the card underneath. Desktop absorbs it; phones do not, which is
+ * why the ring filled in visible steps there and everything was smooth the
+ * moment it finished.
+ *
+ * Companion to the lens skip in `components/glass/liquid-glass.tsx` — that
+ * removed the package's SVG displacement from these same variants; this removes
+ * the CSS filter that was left behind. Floating surfaces (nav, popovers, the
+ * sheet, `.glass-bar`) are untouched: those really do sit over live content.
+ *
+ * Unlayered and !important so it also wins over the Safari @supports block
+ * above, which is precisely where the jitter was worst.
+ *
+ * Appearance is unchanged in dark mode (the fill is pure black, so every
+ * filter function is a no-op). In light mode the backdrop goes from 100% to
+ * the underlying 99% white, since brightness(1.05) had been clipping it — a 1%
+ * shift that is not perceptible against the card's own translucent fill.
+ */
+.app-shell .glass,
+.app-shell .glass-panel {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 @keyframes declarative-dashboard-scroll {

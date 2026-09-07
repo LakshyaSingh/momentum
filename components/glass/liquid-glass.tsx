@@ -127,6 +127,31 @@ const OPTICS: Record<MomentumGlassVariant, Partial<GlassOptics>> = {
  * edge layer resolves to fully transparent shadows at `specular: 0`. So the
  * lens's only visible contribution on these variants is its blur + saturate,
  * which we reproduce exactly below. See tasks/lessons.md.
+ *
+ * `sheet` is the deliberate exception, and the reasoning is worth recording
+ * because it looks like it belongs in this set.
+ *
+ * On cost, it plainly does. A sheet never floats over live content — Radix
+ * paints a full-viewport overlay (`bg-background/40 backdrop-blur-md`) between
+ * the page and the sheet — so its lens displaces an already-blurred, dimmed
+ * field, which is close to an identity operation. Meanwhile it is the largest
+ * filtered rectangle in the app: 512 x 1064 CSS px, or 2.2 Mpx of device pixels
+ * on a DPR-2 laptop panel against 0.54 Mpx on a DPR-1 external display. On a
+ * short viewport its content also scrolls, re-invalidating that rectangle as it
+ * moves. iOS WebKit compounds it further by processing SVG displacement in
+ * software (tasks/lessons.md).
+ *
+ * It keeps the lens anyway, because the rim refraction on the sheet is wanted
+ * and the cost argument above is arithmetic, not measurement — the jank it
+ * predicts has never actually been profiled on a DPR-2 panel. Do not flatten
+ * this variant on the strength of the reasoning alone. If sheet scrolling is
+ * measured to drop frames, adding "sheet" to this set is the one-word fix, and
+ * the only visual loss is the rim: with brightness/specular/glow/sheen already
+ * at 0, blur + saturate below reproduce everything else exactly.
+ *
+ * The package offers no middle setting. `filterResolution` is a supersample
+ * (higher = more expensive, never less) and `maxDpr` is declared in its types
+ * but unimplemented — the identifier does not appear in its shipped JS.
  */
 const FLAT_BACKDROP_VARIANTS = new Set<MomentumGlassVariant>(["card", "panel"]);
 

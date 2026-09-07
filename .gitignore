@@ -48,3 +48,6 @@ prisma/seed-dipanshu.ts
 
 # vercel
 .vercel
+
+# local working notes
+tasks/

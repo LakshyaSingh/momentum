@@ -27,12 +27,6 @@ export function formatRelative(date: Date | string | null | undefined) {
   return formatDate(d);
 }
 
-export function startOfDayLocal(date: Date, _tz?: string): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 export function isoDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");

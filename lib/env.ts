@@ -37,7 +37,6 @@ export const supabaseAuthServerUrl = env.supabaseUrl
 
 export const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 export const isSupabaseAdminConfigured = Boolean(isSupabaseConfigured && env.serviceRoleKey);
-export const isDatabaseConfigured = Boolean(env.databaseUrl);
 
 /** "Demo mode" is on when Supabase isn't configured — auth is bypassed using a fixed demo user. */
 export const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";

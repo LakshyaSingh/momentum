@@ -83,17 +83,6 @@ export function computeLongestStreak(appliedDateKeys: Set<string>): number {
 }
 
 /** Build the daily count map (key = YYYY-MM-DD in the user's timezone). */
-export function buildDailyCounts(
-  applications: { applicationDate: Date }[],
-  timeZone: string,
-): Map<string, number> {
-  const m = new Map<string, number>();
-  for (const a of applications) {
-    const k = isoDateKeyInTimezone(a.applicationDate, timeZone);
-    m.set(k, (m.get(k) ?? 0) + 1);
-  }
-  return m;
-}
 
 async function fetchDailyCounts(userId: string, timeZone: string): Promise<Record<string, number>> {
   try {
@@ -159,8 +148,3 @@ export const computeStreaksForUser = cache(
 
 /** Uncached streak read for mutations in the same request. */
 export { computeStreaksUncached };
-
-export async function revalidateUserApplicationStats(userId: string) {
-  const { revalidateTag } = await import("next/cache");
-  revalidateTag(applicationStatsTag(userId));
-}

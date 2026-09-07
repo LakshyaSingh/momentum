@@ -1,4 +1,4 @@
-import type { Application, ApplicationStatus, Prisma } from "@prisma/client";
+import type { ApplicationStatus, Prisma } from "@prisma/client";
 import { STATUS_ORDER } from "@/components/applications/status-pill";
 import type { ApplicationRow } from "@/components/applications/data-table";
 
@@ -7,6 +7,14 @@ export const APPLICATIONS_CLIENT_INDEX_MAX = 5000;
 
 export type ApplicationsSortKey = "applicationDate" | "company" | "role" | "status";
 
+/** Which list the /applications route is showing. */
+export type ApplicationsTab = "applications" | "queue";
+
+export const APPLICATIONS_TAB_OPTIONS = [
+  { value: "applications", label: "Applied" },
+  { value: "queue", label: "Queue" },
+] as const satisfies readonly { value: ApplicationsTab; label: string }[];
+
 export type ApplicationsQuery = {
   page: number;
   pageSize: number;
@@ -14,6 +22,7 @@ export type ApplicationsQuery = {
   statuses: ApplicationStatus[];
   sort: ApplicationsSortKey;
   dir: "asc" | "desc";
+  tab: ApplicationsTab;
 };
 
 const SORT_KEYS = new Set<ApplicationsSortKey>([
@@ -45,6 +54,8 @@ export function parseApplicationsQuery(
     .filter((s): s is ApplicationStatus =>
       STATUS_ORDER.includes(s as ApplicationStatus),
     );
+  const tab: ApplicationsTab =
+    readParam(params, "tab") === "queue" ? "queue" : "applications";
 
   return {
     page,
@@ -53,6 +64,7 @@ export function parseApplicationsQuery(
     statuses,
     sort,
     dir,
+    tab,
   };
 }
 
@@ -167,7 +179,34 @@ export function uniqueApplicationFieldValues(values: string[]): string[] {
   return unique.sort((a, b) => a.localeCompare(b));
 }
 
-export function toApplicationRow(a: Application): ApplicationRow {
+/**
+ * The fields `toApplicationRow` reads. A full Prisma `Application` satisfies it,
+ * and so does a narrowed `select` — which is why this is structural rather than
+ * `Application`. The dashboard selects a subset and previously carried its own
+ * byte-identical copy of the mapper; two copies of the same serialization is
+ * how the dashboard ended up shipping `Date` objects to a Client Component
+ * while every other surface sent ISO strings.
+ */
+export type ApplicationRowSource = {
+  id: string;
+  company: string;
+  companyDomain: string | null;
+  role: string;
+  location: string | null;
+  jobLink: string | null;
+  applicationDate: Date;
+  status: ApplicationRow["status"];
+  salary: string | null;
+  recruiter: string | null;
+  referral: string | null;
+  notes: string | null;
+  followUpDate: Date | null;
+  responseReceived: boolean;
+  interviewStage: string | null;
+  offerStatus: string | null;
+};
+
+export function toApplicationRow(a: ApplicationRowSource): ApplicationRow {
   return {
     id: a.id,
     company: a.company,
@@ -188,6 +227,14 @@ export function toApplicationRow(a: Application): ApplicationRow {
   };
 }
 
+/**
+ * Serialize the list state back into a query string.
+ *
+ * This is the only writer of /applications search params — callers rebuild the
+ * whole string from scratch rather than patching it — so every piece of URL
+ * state must round-trip through here or it is silently dropped on the next
+ * sort, filter, or pagination click. That includes `tab`.
+ */
 export function applicationsQueryToSearchParams(
   query: ApplicationsQuery,
   updates: Partial<{
@@ -196,11 +243,13 @@ export function applicationsQueryToSearchParams(
     statuses: ApplicationStatus[];
     sort: ApplicationsSortKey;
     dir: "asc" | "desc";
+    tab: ApplicationsTab;
   }> = {},
 ): URLSearchParams {
   const next = { ...query, ...updates };
   const params = new URLSearchParams();
 
+  if (next.tab !== "applications") params.set("tab", next.tab);
   if (next.search) params.set("q", next.search);
   if (next.statuses.length) params.set("status", next.statuses.join(","));
   if (next.page > 1) params.set("page", String(next.page));

@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
+import { QueueReminder } from "@/components/dashboard/queue-reminder";
+import { daysWaiting } from "@/lib/queued-jobs";
 import { weekSeriesFromDailyCounts } from "@/lib/streak";
 import { greetingForTimezone } from "@/lib/timezone";
 import { GlassCard } from "@/components/glass/glass-card";
@@ -53,7 +56,19 @@ async function DashboardBody({
   firstName: string;
 }) {
   const timeZone = user.timezone || "UTC";
-  const snapshot = await getDashboardSnapshot(user.id, timeZone);
+  // Queued jobs are read outside `getDashboardSnapshot` on purpose. That
+  // snapshot is cached against `applicationStatsTag`, so folding the queue into
+  // it would force every queue mutation to throw away correct application
+  // metrics. The page is already force-dynamic, so an uncached count is cheap.
+  const [snapshot, queuedCount, oldestQueued] = await Promise.all([
+    getDashboardSnapshot(user.id, timeZone),
+    prisma.queuedJob.count({ where: { userId: user.id } }),
+    prisma.queuedJob.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    }),
+  ]);
   const days = weekSeriesFromDailyCounts(snapshot.streaks.dailyCounts, timeZone, 7);
   const { streaks, totalAll, recentRows, weekTotal } = snapshot;
 
@@ -73,6 +88,13 @@ async function DashboardBody({
           recentRows={recentRows}
         />
       </DeclarativeGlassSceneRegistration>
+      <QueueReminder
+        count={queuedCount}
+        oldestDays={
+          oldestQueued ? daysWaiting(oldestQueued.createdAt.toISOString()) : 0
+        }
+      />
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <GlassCard panel className="flex flex-col items-center justify-center px-6 py-10 md:col-span-1">
           <DailyGoal today={streaks.appliedToday} goal={user.dailyGoal} />

@@ -1,4 +1,3 @@
-import { revalidatePath, revalidateTag } from "next/cache";
 import { ApplicationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -6,13 +5,11 @@ import {
   ApplicationUpdateSchema,
   type ApplicationInput,
 } from "@/lib/validators";
-import {
-  applicationStatsTag,
-  computeStreaksUncached,
-  milestoneFor,
-} from "@/lib/streak";
+import { computeStreaksUncached, milestoneFor } from "@/lib/streak";
+import { revalidateAllApplicationSurfaces } from "@/lib/revalidate-applications";
+import { pickMotivationSeed } from "@/lib/motivation-seed";
 import { responseReceivedForStatus } from "@/lib/response-received";
-import { resolveCompanyDomainCandidates } from "@/lib/company-logo";
+import { resolvePersistedCompanyDomain } from "@/lib/company-lookup";
 import {
   applicationsOrderBy,
   buildApplicationsWhere,
@@ -51,39 +48,9 @@ export type CreateApplicationResult =
 
 export type MutationResult = { ok: true } | { ok: false; error: string };
 
-/** Mirror of the invalidation the web app performs after any write. */
-function revalidateAll(userId: string) {
-  try {
-    revalidatePath("/dashboard");
-    revalidatePath("/applications");
-    revalidatePath("/analytics");
-    revalidatePath("/calendar");
-    revalidateTag(applicationStatsTag(userId));
-  } catch (err) {
-    // revalidate* require the Next request store; a stray call outside it must
-    // never fail an otherwise-successful write.
-    console.error("revalidateAll skipped", err);
-  }
-}
+const revalidateAll = revalidateAllApplicationSurfaces;
 
-function companyDomainFor(data: {
-  company?: string;
-  companyDomain?: string;
-  jobLink?: string;
-}): string | undefined {
-  return (
-    data.companyDomain ??
-    resolveCompanyDomainCandidates({
-      company: data.company,
-      jobLink: data.jobLink,
-    })[0]
-  );
-}
-
-function pickMotivation() {
-  // The web client maps this seed onto content/jobs-quotes.ts.
-  return { quoteId: Math.floor(Math.random() * 1000) };
-}
+const companyDomainFor = resolvePersistedCompanyDomain;
 
 function errorMessage(err: unknown) {
   if (err instanceof Error) return err.message;
@@ -104,7 +71,7 @@ export async function createApplicationForUser(
       data: {
         userId,
         company: data.company,
-        companyDomain: companyDomainFor(data),
+        companyDomain: await companyDomainFor(data),
         role: data.role,
         location: data.location,
         jobLink: data.jobLink,
@@ -133,7 +100,7 @@ export async function createApplicationForUser(
     return {
       ok: true,
       id: created.id,
-      motivation: pickMotivation(),
+      motivation: pickMotivationSeed(),
       milestone: reachedMilestone,
       currentStreak: after.current,
     };
@@ -164,9 +131,11 @@ export async function updateApplicationForUser(
       where: { id: data.id },
       data: {
         company: data.company,
-        companyDomain:
-          data.companyDomain ??
-          companyDomainFor({ company: nextCompany, jobLink: nextJobLink }),
+        companyDomain: await companyDomainFor({
+          company: nextCompany,
+          companyDomain: data.companyDomain,
+          jobLink: nextJobLink,
+        }),
         role: data.role,
         location: data.location,
         jobLink: data.jobLink,

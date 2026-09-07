@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ParsedJobFields } from "@/lib/job-link/types";
+import { asMessage, looksLikeHttpUrl } from "@/lib/job-link-client";
 
 type JobLinkFieldProps = {
   value: string;
@@ -14,21 +15,6 @@ type JobLinkFieldProps = {
   onParsed: (fields: ParsedJobFields) => void;
   autoFocus?: boolean;
 };
-
-function looksLikeHttpUrl(value: string): boolean {
-  return /^https?:\/\/.+/i.test(value.trim());
-}
-
-/**
- * Coerce an unknown (possibly non-string) value into a safe toast message.
- * Server error responses are not guaranteed to be strings — e.g. an
- * unexpected 500 body or a structured error object — and passing a non-string
- * to sonner's toast renders it as a React child, throwing React error #31
- * ("Objects are not valid as a React child") and white-screening the app.
- */
-function asMessage(value: unknown, fallback: string): string {
-  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
-}
 
 export function JobLinkField({
   value,

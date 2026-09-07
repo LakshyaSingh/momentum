@@ -22,6 +22,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ApplicationSheet } from "./application-sheet";
+import { useRetained } from "@/lib/hooks/use-retained";
 import { CompanyLogo } from "./company-logo";
 import { FilterBar, type ApplicationFilters } from "./filter-bar";
 import { StatusPill, STATUS_LABELS, STATUS_ORDER } from "./status-pill";
@@ -86,6 +87,9 @@ export function DataTable({
   onRowDeleted,
 }: DataTableProps) {
   const [editing, setEditing] = useState<ApplicationRow | null>(null);
+  // Retained so the sheet can finish its slide-out instead of being unmounted
+  // the moment `editing` clears. See useRetained.
+  const sheetRow = useRetained(editing);
 
   function toggleSort(key: SortKey) {
     onSortChange(
@@ -132,7 +136,7 @@ export function DataTable({
               {rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="group cursor-pointer border-b border-border/30 transition-colors hover:bg-background/40"
+                  className="group cursor-pointer touch-manipulation border-b border-border/30 transition-colors hover:bg-background/40 active:bg-background/70"
                   onClick={() => setEditing(row)}
                 >
                     <td className="px-4 py-3 font-medium">
@@ -192,17 +196,17 @@ export function DataTable({
         </div>
       </GlassCard>
 
-      {editing && (
+      {sheetRow && (
         <ApplicationSheet
           open={!!editing}
           onOpenChange={(open) => !open && setEditing(null)}
           mode={{
             kind: "edit",
-            id: editing.id,
-            defaults: applicationRowToFormDefaults(editing),
+            id: sheetRow.id,
+            defaults: applicationRowToFormDefaults(sheetRow),
           }}
           onSaved={(values) =>
-            onRowUpdated?.(editing.id, applicationInputToRowPatch(values))
+            onRowUpdated?.(sheetRow.id, applicationInputToRowPatch(values))
           }
         />
       )}

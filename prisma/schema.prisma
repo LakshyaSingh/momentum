@@ -24,6 +24,7 @@ model User {
   updatedAt    DateTime      @updatedAt
 
   applications Application[]
+  queuedJobs   QueuedJob[]
   tags         Tag[]
 
   @@map("users")
@@ -59,6 +60,33 @@ model Application {
   @@index([userId, applicationDate])
   @@index([userId, status])
   @@map("applications")
+}
+
+/// A job found but not yet applied to. Deliberately a separate table from
+/// Application: every metric (streak, daily goal, heatmap, funnel, analytics)
+/// reads `prisma.application` unfiltered, so keeping the queue out of that
+/// model is what guarantees a queued job cannot move those numbers.
+/// Promoting a row to a real Application happens in `applyQueuedJob`.
+model QueuedJob {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Nullable: a freshly pasted link is stored immediately, before the
+  /// (slow) page parse has resolved a company or role.
+  company       String?
+  companyDomain String?
+  role          String?
+  location      String?
+  jobLink       String
+  salary        String?
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@map("queued_jobs")
 }
 
 /// Each row is a status transition; powers the funnel and history timeline.
