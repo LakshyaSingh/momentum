@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { lookupConfidentCompanyDomainFromName } from "@/lib/company-lookup";
 import {
-  isAtsVendorDomain,
   isValidCompanyDomain,
   normalizeCompanyDomain,
   resolveCompanyDomainCandidates,
@@ -90,7 +89,10 @@ async function fetchLogoFromDomains(
   const tried = new Set<string>();
   for (const candidate of domains) {
     const normalized = normalizeCompanyDomain(candidate);
-    if (!isValidCompanyDomain(normalized) || isAtsVendorDomain(normalized) || tried.has(normalized)) {
+    // Job-board domains are already filtered where the candidates are built,
+    // which knows whether the user typed the domain or the company is the
+    // job board itself. Filtering them again here undid that.
+    if (!isValidCompanyDomain(normalized) || tried.has(normalized)) {
       continue;
     }
     tried.add(normalized);

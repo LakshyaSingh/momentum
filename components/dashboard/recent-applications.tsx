@@ -10,6 +10,12 @@ import { CompanyLogo } from "@/components/applications/company-logo";
 import { StatusPill } from "@/components/applications/status-pill";
 import { ApplicationSheet } from "@/components/applications/application-sheet";
 import { useRetained } from "@/lib/hooks/use-retained";
+import {
+  isPendingRow,
+  mergePendingRows,
+  rowKey,
+  usePendingApplications,
+} from "@/components/applications/optimistic-applications";
 import { formatRelative } from "@/lib/utils";
 import type { ApplicationRow } from "@/components/applications/data-table";
 import {
@@ -18,15 +24,21 @@ import {
 } from "@/lib/application-row-form";
 
 export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
-  const [localRows, setLocalRows] = useState(rows);
+  // Edits are patched over the server rows rather than copied into state: a
+  // copy trails the props by a render, so a new row would vanish for a frame
+  // when it hands over from pending to confirmed, then remount.
+  const [patches, setPatches] = useState<Record<string, Partial<ApplicationRow>>>({});
   const [editing, setEditing] = useState<ApplicationRow | null>(null);
   // Retained so the sheet can finish its slide-out instead of being unmounted
   // the moment `editing` clears. See useRetained.
   const sheetRow = useRetained(editing);
 
   useEffect(() => {
-    setLocalRows(rows);
+    setPatches({});
   }, [rows]);
+  const localRows = rows.map((row) => (patches[row.id] ? { ...row, ...patches[row.id] } : row));
+  const pending = usePendingApplications();
+  const displayRows = mergePendingRows(pending, localRows, Math.max(localRows.length, 6));
 
   return (
     <GlassCard className="p-4 sm:p-6">
@@ -36,15 +48,15 @@ export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
           See all <ArrowRight className="size-3" />
         </Link>
       </header>
-      {localRows.length === 0 ? (
+      {displayRows.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
           You haven&apos;t logged any applications yet. Start with one.
         </p>
       ) : (
         <ul className="space-y-1">
-          {localRows.map((row, i) => (
+          {displayRows.map((row, i) => (
             <motion.li
-              key={row.id}
+              key={rowKey(row)}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04, duration: 0.3, ease: EASE_OUT }}
@@ -52,7 +64,9 @@ export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
               <button
                 type="button"
                 onClick={() => setEditing(row)}
-                className="-mx-3 flex w-[calc(100%+1.5rem)] touch-manipulation items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-background/40 active:bg-background/70 md:items-center"
+                // A row still being saved has no id to edit yet.
+                disabled={isPendingRow(row)}
+                className="-mx-3 flex w-[calc(100%+1.5rem)] touch-manipulation items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors disabled:pointer-events-none hover:bg-background/40 active:bg-background/70 md:items-center"
               >
                 <CompanyLogo
                   company={row.company}
@@ -90,9 +104,7 @@ export function RecentApplications({ rows }: { rows: ApplicationRow[] }) {
           }}
           onSaved={(values) => {
             const patch = applicationInputToRowPatch(values);
-            setLocalRows((prev) =>
-              prev.map((row) => (row.id === sheetRow.id ? { ...row, ...patch } : row)),
-            );
+            setPatches((prev) => ({ ...prev, [sheetRow.id]: { ...prev[sheetRow.id], ...patch } }));
           }}
         />
       )}

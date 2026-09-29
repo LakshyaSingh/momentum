@@ -35,6 +35,10 @@ import {
   readWarmedApplicationsIndex,
   warmApplicationsIndex,
 } from "@/lib/applications-index-client";
+import {
+  mergePendingRows,
+  usePendingApplications,
+} from "@/components/applications/optimistic-applications";
 
 type ApplicationsViewProps = {
   serverRows: ApplicationRow[];
@@ -281,7 +285,22 @@ export function ApplicationsView({
     return applyRowMutations(serverRows);
   }, [useClientSearch, clientRows, safeClientPage, serverRows, applyRowMutations]);
 
-  const showingTotal = useClientSearch ? clientRows.length : filteredTotal;
+  // New applications still being saved belong at the top of the default view:
+  // page one, newest first, unfiltered. Anywhere else they would be guessing.
+  const pending = usePendingApplications();
+  const showPending =
+    pending.length > 0 &&
+    !hasActiveFilters &&
+    !useClientSearch &&
+    query.page === 1 &&
+    sort.key === "applicationDate" &&
+    sort.dir === "desc";
+  const tableRows = showPending
+    ? mergePendingRows(pending, visibleRows, APPLICATIONS_PAGE_SIZE)
+    : visibleRows;
+  const pendingCount = showPending ? pending.length : 0;
+
+  const showingTotal = (useClientSearch ? clientRows.length : filteredTotal) + pendingCount;
   const totalPages = Math.max(1, Math.ceil(showingTotal / APPLICATIONS_PAGE_SIZE));
   const currentPage = useClientSearch ? safeClientPage : query.page;
   const rangeStart = showingTotal === 0 ? 0 : (currentPage - 1) * APPLICATIONS_PAGE_SIZE + 1;
@@ -319,8 +338,8 @@ export function ApplicationsView({
         )}
       >
         <DataTable
-          rows={visibleRows}
-          total={totalAll}
+          rows={tableRows}
+          total={totalAll + pendingCount}
           filteredTotal={showingTotal}
           filters={filters}
           sort={sort}
@@ -335,7 +354,7 @@ export function ApplicationsView({
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <p className="text-sm text-muted-foreground">
             Showing {rangeStart}–{rangeEnd} of {showingTotal}
-            {hasActiveFilters ? ` (${totalAll} total)` : ""}
+            {hasActiveFilters ? ` (${totalAll + pendingCount} total)` : ""}
           </p>
           <div className="flex items-center gap-2">
             <Button

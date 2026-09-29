@@ -3,6 +3,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { ApplicationsView } from "@/components/applications/applications-view";
 import { ApplicationsTabs } from "@/components/applications/applications-tabs";
+import { usePendingCount } from "@/components/applications/optimistic-applications";
 import { QueueView } from "@/components/applications/queue-view";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import {
@@ -68,14 +69,15 @@ export function ApplicationsTabsView({
     [query],
   );
 
+  const total = totalAll + usePendingCount("all");
   const subtitle =
     tab === "queue"
       ? queuedCount === 0
         ? "Collect links now, apply to them in one sitting."
         : `${queuedCount} waiting to be applied to.`
-      : totalAll === 0
+      : total === 0
         ? "Log your first application. Momentum starts now."
-        : `${totalAll} ${totalAll === 1 ? "application" : "applications"}, all in one place.`;
+        : `${total} ${total === 1 ? "application" : "applications"}, all in one place.`;
 
   return (
     <>

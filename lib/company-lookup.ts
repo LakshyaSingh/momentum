@@ -2,6 +2,8 @@ import { unstable_cache } from "next/cache";
 import {
   domainFromCompanyName,
   domainFromJobLink,
+  isAtsVendorDomain,
+  isJobBoardOwnDomain,
   isValidCompanyDomain,
   normalizeCompanyDomain,
   resolveCompanyDomainCandidates,
@@ -15,6 +17,7 @@ export type ClearbitSuggestion = {
 
 const CLEARBIT_SUGGEST_URL = "https://autocomplete.clearbit.com/v1/companies/suggest";
 const LOOKUP_CACHE_SECONDS = 60 * 60 * 24 * 30;
+const CLEARBIT_TIMEOUT_MS = 1500;
 const MIN_CONFIDENT_SCORE = 85;
 const SHORT_QUERY_MAX_LENGTH = 5;
 
@@ -125,6 +128,10 @@ async function fetchClearbitSuggestions(company: string): Promise<ClearbitSugges
           "Mozilla/5.0 (compatible; MomentumJobTracker/1.0; +https://momentum-delta-five.vercel.app)",
       },
       next: { revalidate: LOOKUP_CACHE_SECONDS },
+      // This runs inside createApplication, so it is on the save path. A logo
+      // is not worth holding a save for; on timeout we store no domain and the
+      // row shows initials, which the logo route can still upgrade later.
+      signal: AbortSignal.timeout(CLEARBIT_TIMEOUT_MS),
     });
 
     if (!response.ok) return [];
@@ -144,7 +151,11 @@ export async function lookupConfidentCompanyDomainFromName(
 
   const suggestions = await fetchClearbitSuggestions(trimmed);
   const best = pickBestClearbitSuggestion(trimmed, suggestions);
-  return best ? normalizeCompanyDomain(best.domain) : undefined;
+  if (!best) return undefined;
+  const domain = normalizeCompanyDomain(best.domain);
+  // Same rule as the offline candidates: a job board's domain only for the job board.
+  if (isAtsVendorDomain(domain) && !isJobBoardOwnDomain(domain, trimmed)) return undefined;
+  return domain;
 }
 
 function cachedLookupKey(company: string, jobLink?: string | null): string[] {

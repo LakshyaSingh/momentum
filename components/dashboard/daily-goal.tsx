@@ -2,8 +2,10 @@
 
 import { ProgressRing } from "./progress-ring";
 import { AnimatedNumber } from "./animated-number";
+import { usePendingCount } from "@/components/applications/optimistic-applications";
 
-export function DailyGoal({ today, goal }: { today: number; goal: number }) {
+export function DailyGoal({ today: confirmed, goal }: { today: number; goal: number }) {
+  const today = confirmed + usePendingCount("today");
   const pct = goal > 0 ? Math.min(1, today / goal) : 0;
   return (
     <ProgressRing

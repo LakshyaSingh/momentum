@@ -65,13 +65,18 @@ export async function createApplicationForUser(
   try {
     const data = ApplicationSchema.parse(input);
 
-    const before = await computeStreaksUncached(userId, timezone);
+    // Independent reads — the domain lookup can go to the network, so it must
+    // not queue behind the streak query.
+    const [before, companyDomain] = await Promise.all([
+      computeStreaksUncached(userId, timezone),
+      companyDomainFor(data),
+    ]);
 
     const created = await prisma.application.create({
       data: {
         userId,
         company: data.company,
-        companyDomain: await companyDomainFor(data),
+        companyDomain,
         role: data.role,
         location: data.location,
         jobLink: data.jobLink,

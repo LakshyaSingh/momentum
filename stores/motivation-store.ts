@@ -35,6 +35,12 @@ interface MotivationState {
   trigger: (t: Omit<MotivationTrigger, "quoteIdx">) => void;
   dismiss: () => void;
   consumeMilestone: () => void;
+  /**
+   * The banner opens the moment a create is submitted, before the server has
+   * said whether it crossed a streak milestone. This attaches that answer when
+   * it arrives; the celebration still waits for the banner to close.
+   */
+  queueMilestone: (milestone: number | null, streak: number) => void;
 }
 
 export const useMotivationStore = create<MotivationState>()(
@@ -65,6 +71,9 @@ export const useMotivationStore = create<MotivationState>()(
       dismiss: () => set({ current: null }),
 
       consumeMilestone: () => set({ pendingMilestone: null }),
+
+      queueMilestone: (milestone, streak) =>
+        set({ pendingMilestone: milestone ? { milestone, streak } : null }),
     }),
     {
       name: "momentum-motivation",
@@ -75,3 +84,15 @@ export const useMotivationStore = create<MotivationState>()(
     },
   ),
 );
+
+/** Resolves once no banner is showing — immediately if none is. */
+export function whenMotivationDismissed(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!useMotivationStore.getState().current) return resolve();
+    const unsubscribe = useMotivationStore.subscribe((state) => {
+      if (state.current) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}

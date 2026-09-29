@@ -12,7 +12,7 @@ import { StreakDisplay } from "@/components/dashboard/streak-display";
 import { WeekSparkline } from "@/components/dashboard/week-sparkline";
 import { RecentApplications } from "@/components/dashboard/recent-applications";
 import { QuickAdd } from "@/components/applications/quick-add";
-import { AnimatedNumber } from "@/components/dashboard/animated-number";
+import { LiveCount } from "@/components/dashboard/live-count";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import type { SessionUser } from "@/lib/auth";
 import { DeclarativeGlassSceneRegistration } from "@/components/glass/declarative-glass-scene";
@@ -100,12 +100,12 @@ async function DashboardBody({
           <DailyGoal today={streaks.appliedToday} goal={user.dailyGoal} />
         </GlassCard>
         <div className="grid grid-cols-1 gap-4 md:col-span-2">
-          <StreakDisplay current={streaks.current} longest={streaks.longest} />
-          <StatTile
-            label="All time"
-            value={totalAll}
-            suffix={totalAll === 1 ? "application" : "applications"}
+          <StreakDisplay
+            current={streaks.current}
+            longest={streaks.longest}
+            appliedToday={streaks.appliedToday}
           />
+          <StatTile label="All time" value={totalAll} />
         </div>
       </div>
 
@@ -115,7 +115,12 @@ async function DashboardBody({
             <div>
               <h2 className="text-sm font-medium text-muted-foreground">Last 7 days</h2>
               <p className="mt-1 text-xl font-medium tracking-tight">
-                {weekTotal} application{weekTotal === 1 ? "" : "s"}
+                <LiveCount
+                  value={weekTotal}
+                  scope="week"
+                  unit={[" application", " applications"]}
+                  animated={false}
+                />
               </p>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -148,13 +153,18 @@ function DashboardBodySkeleton() {
   );
 }
 
-function StatTile({ label, value, suffix }: { label: string; value: number; suffix?: string }) {
+function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <GlassCard className="p-5">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
       <div className="mt-2 flex items-baseline gap-2">
-        <AnimatedNumber value={value} className="text-display-md font-semibold tracking-tighter" />
-        {suffix && <span className="text-sm text-muted-foreground">{suffix}</span>}
+        <LiveCount
+          value={value}
+          scope="all"
+          unit={["application", "applications"]}
+          className="text-display-md font-semibold tracking-tighter"
+          labelClassName="text-sm text-muted-foreground"
+        />
       </div>
     </GlassCard>
   );

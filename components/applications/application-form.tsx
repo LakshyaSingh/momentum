@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { startTransition, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +21,8 @@ import {
 import { ApplicationSchema, type ApplicationInput } from "@/lib/validators";
 import { STATUS_LABELS, STATUS_ORDER } from "@/components/applications/status-pill";
 import { createApplication, updateApplication } from "@/app/actions/applications";
-import { useMotivationStore } from "@/stores/motivation-store";
+import { useMotivationStore, whenMotivationDismissed } from "@/stores/motivation-store";
+import { pickMotivationSeed } from "@/lib/motivation-seed";
 import { useApplicationFieldSuggestions } from "@/lib/hooks/use-application-field-suggestions";
 import { JobLinkField } from "@/components/applications/job-link-field";
 import type { ParsedJobFields } from "@/lib/job-link/types";
@@ -31,6 +32,13 @@ import {
   clearApplicationsIndexWarmCache,
   warmApplicationsNavigation,
 } from "@/lib/applications-index-client";
+import {
+  newPendingRow,
+  rememberSettledRow,
+  useAddPendingApplication,
+} from "@/components/applications/optimistic-applications";
+
+type CreateResult = Awaited<ReturnType<typeof createApplication>>;
 
 type Mode =
   | { kind: "create"; defaults?: Partial<ApplicationInput> }
@@ -42,6 +50,8 @@ export function ApplicationForm({
   onDone,
   onSaved,
   onCreated,
+  onCreateFailed,
+  initialError,
 }: {
   mode: Mode;
   autoFocusJobLink?: boolean;
@@ -53,11 +63,25 @@ export function ApplicationForm({
    * Used by the queue to drop its row once the job has actually been applied to.
    */
   onCreated?: (id: string) => void;
+  /**
+   * Create only — the sheet has already closed by the time the server answers,
+   * so a failure hands the values back to reopen it without losing the entry.
+   */
+  onCreateFailed?: (values: ApplicationInput, error: string) => void;
+  /** Shown above the buttons when the sheet reopens after a failed create. */
+  initialError?: string;
 }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
+  // One submit at a time. A create keeps the sheet open under the banner, with
+  // focus still in the form, so a second Enter there would log it twice. Every
+  // path that ends a submit clears this, because a sheet reopened before its
+  // exit animation finishes reuses this same form instance.
+  const submitted = useRef(false);
+  const [serverError, setServerError] = useState<string | null>(initialError ?? null);
   const trigger = useMotivationStore((s) => s.trigger);
+  const queueMilestone = useMotivationStore((s) => s.queueMilestone);
+  const dismissMotivation = useMotivationStore((s) => s.dismiss);
+  const addPending = useAddPendingApplication();
   const { companies, roles, locations } = useApplicationFieldSuggestions();
 
   const defaultValues: Partial<ApplicationInput> =
@@ -86,36 +110,93 @@ export function ApplicationForm({
   });
 
   function onSubmit(values: ApplicationInput) {
+    if (submitted.current) return;
+    submitted.current = true;
     setServerError(null);
 
     if (mode.kind === "edit") {
       saveEdit(values, mode.id);
+      submitted.current = false;
       return;
     }
 
-    start(async () => {
-      const res = await createApplication(values);
-      if (!res.ok) {
-        setServerError(res.error);
-        toast.error(res.error);
+    saveCreate(values);
+  }
+
+  /**
+   * Create in the order the moment should be felt: banner first, then the page.
+   *
+   * 1. The motivation banner opens on submit, over the still-open sheet. It needs
+   *    nothing from the server — its seeds are random either way — so it no
+   *    longer waits a round trip to appear. The save runs underneath it.
+   * 2. Dismissing the banner (tap, Esc, or its 7s timeout) closes the sheet and
+   *    reveals the page with the new row and the goal ring moving to the new
+   *    count. Nothing on the page changes while the banner is up, so that
+   *    movement is seen rather than missed behind it.
+   * 3. A streak milestone is only known once the server answers; it is attached
+   *    to the store when it arrives and plays after the banner closes.
+   *
+   * The page update is held back by this transition itself. It stays open until
+   * after the dismissal, and React does not commit the server action's
+   * revalidated page before the async action it belongs to settles. If the
+   * server has already answered, the confirmed row lands as the sheet slides
+   * away; if not, a pending row (`PendingApplicationsProvider`) stands in until
+   * it does and then hands over in the same commit.
+   *
+   * No `router.refresh()`: the action's response already carries the page.
+   *
+   * A failure while the banner is up closes the banner and leaves the sheet
+   * open with the error, rather than celebrating a save that did not happen.
+   */
+  function saveCreate(values: ApplicationInput) {
+    const row = newPendingRow(values);
+    const seed = pickMotivationSeed();
+    trigger({ quoteSeed: seed.quoteId, milestone: null, streak: 0 });
+
+    startTransition(async () => {
+      let settled: CreateResult | null = null;
+      const request = createApplication(values)
+        .catch((): CreateResult => ({ ok: false, error: "Could not reach the server." }))
+        .then((res) => {
+          settled = res;
+          if (!res.ok) dismissMotivation();
+          else queueMilestone(res.milestone, res.currentStreak);
+          return res;
+        });
+
+      await whenMotivationDismissed();
+
+      const early = settled as CreateResult | null;
+      if (early && !early.ok) {
+        failCreate(values, early.error, { sheetOpen: true });
         return;
       }
+
+      if (!early) startTransition(() => addPending(row));
+      onDone?.();
+      submitted.current = false;
+
+      const res = await request;
+      if (!res.ok) {
+        failCreate(values, res.error, { sheetOpen: false });
+        return;
+      }
+
+      rememberSettledRow(res.id, row.id);
       toast.success(`Logged ${values.company}`);
       clearApplicationsIndexWarmCache();
-      try {
-        trigger({
-          quoteSeed: res.motivation.quoteId,
-          milestone: res.milestone,
-          streak: res.currentStreak,
-        });
-      } catch (err) {
-        console.error("Motivation overlay failed", err);
-      }
       onCreated?.(res.id);
-      router.refresh();
       warmApplicationsNavigation(router, { forceIndex: true });
-      onDone?.();
     });
+  }
+
+  function failCreate(values: ApplicationInput, error: string, { sheetOpen }: { sheetOpen: boolean }) {
+    toast.error(`${values.company} wasn’t saved. ${error}`);
+    submitted.current = false;
+    // Shown inline when this instance is still (or again) on screen; a fresh
+    // mount after a reopen gets the same message through `initialError`.
+    setServerError(error);
+    if (!sheetOpen) onCreateFailed?.(values, error);
   }
 
   /**
@@ -130,8 +211,7 @@ export function ApplicationForm({
    * Deliberately NOT inside `start()`. React keeps a transition pending until
    * its async body settles, so a close scheduled inside one does not commit
    * until the write returns — measured at ~2.5s against a dev server, which is
-   * the exact delay this is meant to remove. The transition still wraps the
-   * create path, where the form stays mounted and `pending` drives the button.
+   * the exact delay this is meant to remove.
    *
    * The parent applies the same patch to its local row, so the new value is on
    * screen immediately and no success toast is needed. On failure we say so and
@@ -343,12 +423,12 @@ export function ApplicationForm({
 
       <div className="flex items-center justify-end gap-2">
         {onDone && (
-          <Button type="button" variant="ghost" onClick={onDone} disabled={pending}>
+          <Button type="button" variant="ghost" onClick={onDone}>
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : mode.kind === "create" ? "Add application" : "Save changes"}
+        <Button type="submit">
+          {mode.kind === "create" ? "Add application" : "Save changes"}
         </Button>
       </div>
     </form>

@@ -16,18 +16,31 @@ const optionalUrl = z
   .transform((v) => (v && v.length > 0 ? v : undefined))
   .refine((v) => !v || /^https?:\/\//i.test(v), { message: "Must start with http(s)://" });
 
+/** A job-board URL with a path — a posting link, not a company's domain. */
+function isJobBoardLink(value: string): boolean {
+  const raw = value.trim();
+  if (!isAtsVendorDomain(raw)) return false;
+  try {
+    const { pathname } = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return pathname.replace(/\/+$/, "") !== "";
+  } catch {
+    return false;
+  }
+}
+
 const optionalCompanyDomain = z
   .string()
   .max(2048)
   .optional()
-  .refine((v) => !v || !isAtsVendorDomain(v), {
-    message: "Use the company domain, not the job board domain",
+  // A job board's own domain is allowed: the user typed it, and the company may
+  // be the job board itself (applying to LinkedIn → linkedin.com). What is
+  // still caught is a whole job-board *link* pasted into this field — the
+  // common mistake the old blanket rule existed for.
+  .refine((v) => !v || !isJobBoardLink(v), {
+    message: "That looks like a job link. Enter just the domain, like linkedin.com",
   })
   .transform((v) => (v === undefined ? undefined : normalizeCompanyDomain(v)))
-  .refine((v) => !v || isValidCompanyDomain(v), { message: "Enter a valid domain" })
-  .refine((v) => !v || !isAtsVendorDomain(v), {
-    message: "Use the company domain, not the job board domain",
-  });
+  .refine((v) => !v || isValidCompanyDomain(v), { message: "Enter a valid domain" });
 
 export const ApplicationSchema = z.object({
   company: z.string().min(1, "Company is required").max(120),

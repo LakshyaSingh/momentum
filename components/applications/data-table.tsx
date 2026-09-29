@@ -22,6 +22,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ApplicationSheet } from "./application-sheet";
+import { isPendingRow, rowKey } from "./optimistic-applications";
 import { useRetained } from "@/lib/hooks/use-retained";
 import { CompanyLogo } from "./company-logo";
 import { FilterBar, type ApplicationFilters } from "./filter-bar";
@@ -135,8 +136,12 @@ export function DataTable({
             <tbody>
               {rows.map((row) => (
                 <tr
-                  key={row.id}
-                  className="group cursor-pointer touch-manipulation border-b border-border/30 transition-colors hover:bg-background/40 active:bg-background/70"
+                  key={rowKey(row)}
+                  className={cn(
+                    "group cursor-pointer touch-manipulation border-b border-border/30 transition-colors hover:bg-background/40 active:bg-background/70",
+                    // Still being saved: shown, but there is no id to edit yet.
+                    isPendingRow(row) && "pointer-events-none",
+                  )}
                   onClick={() => setEditing(row)}
                 >
                     <td className="px-4 py-3 font-medium">

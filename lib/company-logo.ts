@@ -137,6 +137,28 @@ function isSafeCompanyDomain(value: string | undefined): value is string {
   return Boolean(value && isValidCompanyDomain(value) && !isAtsVendorDomain(value));
 }
 
+/**
+ * A job board's domain is still a company's real domain when the company *is*
+ * the job board — an application to LinkedIn belongs at linkedin.com, one to
+ * Ashby at ashbyhq.com.
+ *
+ * Job-board domains are blocked from inference because a posting hosted on
+ * Greenhouse must not show Greenhouse's logo for the company hiring through
+ * it. That rule is about the job *link*; it never meant the board itself
+ * could not be the employer.
+ *
+ * Matching is on the domain's first label against the company name, allowing
+ * a short suffix ("ashby" → "ashbyhq") but not a longer one, so a company
+ * called "Link" does not claim linkedin.com.
+ */
+export function isJobBoardOwnDomain(domain: string, company: string | null | undefined): boolean {
+  const slug = company ? slugFromCompanyName(company) : "";
+  if (slug.length < 2) return false;
+  const label = normalizeCompanyDomain(domain).split(".")[0] ?? "";
+  if (label === slug) return true;
+  return slug.length >= 4 && label.startsWith(slug) && label.length - slug.length <= 2;
+}
+
 function registrableDomain(host: string): string | undefined {
   const normalized = normalizeHostname(host);
   const parts = normalized.split(".").filter(Boolean);
@@ -236,8 +258,25 @@ function domainFromHiringOrgUrl(value: string | null | undefined): string | unde
   }
 }
 
-function pushDomain(out: string[], seen: Set<string>, domain: string | undefined): void {
-  if (!isSafeCompanyDomain(domain)) return;
+/**
+ * `trusted` is for a domain the user typed: it is theirs to decide, job board
+ * or not. Inferred domains may be a job board only when the company is that
+ * job board (see `isJobBoardOwnDomain`).
+ */
+function pushDomain(
+  out: string[],
+  seen: Set<string>,
+  domain: string | undefined,
+  options: { trusted?: boolean; company?: string | null } = {},
+): void {
+  if (!domain || !isValidCompanyDomain(domain)) return;
+  if (
+    isAtsVendorDomain(domain) &&
+    !options.trusted &&
+    !isJobBoardOwnDomain(domain, options.company)
+  ) {
+    return;
+  }
   const normalized = normalizeCompanyDomain(domain);
   if (seen.has(normalized)) return;
   seen.add(normalized);
@@ -253,7 +292,7 @@ export function resolveCompanyDomainCandidates(params: {
   const candidates: string[] = [];
   const seen = new Set<string>();
 
-  pushDomain(candidates, seen, params.explicitDomain ?? undefined);
+  pushDomain(candidates, seen, params.explicitDomain ?? undefined, { trusted: true });
   pushDomain(candidates, seen, domainFromHiringOrgUrl(params.hiringOrgUrl));
 
   const companySlug = params.company ? slugFromCompanyName(params.company) : "";
@@ -269,6 +308,12 @@ export function resolveCompanyDomainCandidates(params: {
       if (isAtsVendorDomain(host)) {
         const tenant = tenantFromAtsSubdomain(host) ?? tenantFromAtsPath(host, segments);
         pushDomain(candidates, seen, tenant ? domainFromTenantSlug(tenant) : undefined);
+        // Applying to the job board itself, e.g. LinkedIn on linkedin.com/jobs.
+        // Checked against the board's host, not just its root domain: hosts
+        // like workforcenow.adp.com are boards whose root (adp.com) is not.
+        if (isJobBoardOwnDomain(host, params.company)) {
+          pushDomain(candidates, seen, registrableDomain(host), { company: params.company });
+        }
       } else {
         pushDomain(candidates, seen, domainFromBrandedCareersHost(host));
         pushDomain(candidates, seen, domainFromCorporateHost(host));
@@ -279,7 +324,7 @@ export function resolveCompanyDomainCandidates(params: {
   }
 
   if (companySlug && BRAND_DOMAINS[companySlug]) {
-    pushDomain(candidates, seen, BRAND_DOMAINS[companySlug]);
+    pushDomain(candidates, seen, BRAND_DOMAINS[companySlug], { company: params.company });
   }
 
   return candidates;

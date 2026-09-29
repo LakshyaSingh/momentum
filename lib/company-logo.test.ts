@@ -6,6 +6,7 @@ import {
   domainFromCompanyName,
   domainFromJobLink,
   isAtsVendorDomain,
+  isJobBoardOwnDomain,
   isValidCompanyDomain,
   normalizeCompanyDomain,
   resolveCompanyDomain,
@@ -152,6 +153,42 @@ assert.equal(domainFromJobLink("https://careers.acme.co.uk/jobs/1"), "acme.co.uk
 assert.equal(
   domainFromJobLink("https://workforcenow.adp.com/mascsr/default/mdf/recruitment.html"),
   undefined,
+);
+
+// A job board is a real employer too: a typed job-board domain is accepted,
+// and an application *to* the job board resolves to its domain.
+assert.equal(ApplicationSchema.shape.companyDomain.parse("linkedin.com"), "linkedin.com");
+assert.equal(ApplicationSchema.shape.companyDomain.parse("https://www.ashbyhq.com/"), "ashbyhq.com");
+assert.equal(
+  ApplicationSchema.shape.companyDomain.safeParse("https://www.linkedin.com/jobs/view/4012345678").success,
+  false,
+);
+assert.deepEqual(resolveCompanyDomainCandidates({ explicitDomain: "linkedin.com" }), ["linkedin.com"]);
+assert.deepEqual(
+  resolveCompanyDomainCandidates({
+    company: "LinkedIn",
+    jobLink: "https://www.linkedin.com/jobs/view/4012345678",
+  }),
+  ["linkedin.com"],
+);
+// ...but a posting hosted on a job board still never takes the board's domain.
+assert.deepEqual(
+  resolveCompanyDomainCandidates({
+    company: "Nebulock",
+    jobLink: "https://www.linkedin.com/jobs/view/4012345678",
+  }),
+  [],
+);
+assert.equal(isJobBoardOwnDomain("linkedin.com", "LinkedIn"), true);
+assert.equal(isJobBoardOwnDomain("ashbyhq.com", "Ashby"), true);
+assert.equal(isJobBoardOwnDomain("greenhouse.io", "Greenhouse"), true);
+// Deliberately strict: a longer name must not claim a board ("Indeed Health" ≠ indeed.com).
+assert.equal(isJobBoardOwnDomain("indeed.com", "Indeed Health"), false);
+assert.equal(isJobBoardOwnDomain("linkedin.com", "Link"), false);
+assert.equal(isJobBoardOwnDomain("linkedin.com", "Stripe"), false);
+assert.equal(
+  companyLogoApiUrl({ company: "LinkedIn", companyDomain: "linkedin.com" }),
+  "/api/company-logo?company=LinkedIn&verifiedDomain=1&domain=linkedin.com",
 );
 
 console.log("company-logo tests passed");

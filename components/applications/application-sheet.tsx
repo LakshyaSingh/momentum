@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -32,9 +32,20 @@ export function ApplicationSheet({
   const isDesktop = useMediaQuery("(min-width: 640px)");
   const contentRef = useRef<HTMLDivElement>(null);
   const side = isDesktop ? "right" : "bottom";
+  // A create closes the sheet before the server answers. If it then fails,
+  // reopen with what was typed so the entry is not lost.
+  const [failed, setFailed] = useState<{ values: ApplicationInput; error: string } | null>(null);
+  const formMode =
+    mode.kind === "create" && failed
+      ? { kind: "create" as const, defaults: { ...mode.defaults, ...failed.values } }
+      : mode;
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setFailed(null);
+    onOpenChange(next);
+  };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         ref={contentRef}
         side={side}
@@ -63,11 +74,19 @@ export function ApplicationSheet({
         </SheetHeader>
         <div className="mt-6">
           <ApplicationForm
-            mode={mode}
+            mode={formMode}
             autoFocusJobLink={isDesktop}
-            onDone={() => onOpenChange(false)}
+            onDone={() => handleOpenChange(false)}
             onSaved={onSaved}
-            onCreated={onCreated}
+            onCreated={(id) => {
+              setFailed(null);
+              onCreated?.(id);
+            }}
+            onCreateFailed={(values, error) => {
+              setFailed({ values, error });
+              onOpenChange(true);
+            }}
+            initialError={failed?.error}
           />
         </div>
       </SheetContent>

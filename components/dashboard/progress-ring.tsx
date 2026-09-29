@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { clamp } from "@/lib/utils";
-import { EASE_OUT } from "@/lib/motion";
+import { DURATION_REVEAL, DURATION_UPDATE, EASE_OUT } from "@/lib/motion";
 
 interface ProgressRingProps {
   /** Value in 0..max */
@@ -33,6 +34,10 @@ export function ProgressRing({
   const fraction = clamp(value / Math.max(1, max), 0, 1);
   const offset = circumference * (1 - fraction);
   const reduce = useReducedMotion();
+  const revealed = useRef(false);
+  useEffect(() => {
+    revealed.current = true;
+  }, []);
 
   return (
     <div className="relative inline-flex" style={{ width: size, height: size }} role="img" aria-label={ariaLabel}>
@@ -57,7 +62,10 @@ export function ProgressRing({
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: reduce ? 0 : 1.1, ease: EASE_OUT }}
+          transition={{
+            duration: reduce ? 0 : revealed.current ? DURATION_UPDATE : DURATION_REVEAL,
+            ease: EASE_OUT,
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">

@@ -4,14 +4,22 @@ import { motion } from "framer-motion";
 import { Flame } from "lucide-react";
 import { AnimatedNumber } from "./animated-number";
 import { GlassCard } from "@/components/glass/glass-card";
+import { usePendingCount } from "@/components/applications/optimistic-applications";
 
 export function StreakDisplay({
-  current,
-  longest,
+  current: confirmedCurrent,
+  longest: confirmedLongest,
+  appliedToday,
 }: {
   current: number;
   longest: number;
+  /** Confirmed count for today; the first application of the day extends the streak. */
+  appliedToday: number;
 }) {
+  const pendingToday = usePendingCount("today");
+  const startsToday = appliedToday === 0 && pendingToday > 0;
+  const current = confirmedCurrent + (startsToday ? 1 : 0);
+  const longest = Math.max(confirmedLongest, current);
   return (
     <GlassCard className="relative overflow-hidden p-6">
       {current > 0 && (

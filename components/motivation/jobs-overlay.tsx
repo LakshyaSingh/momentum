@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMotivationStore } from "@/stores/motivation-store";
 import { EASE_OUT } from "@/lib/motion";
@@ -30,7 +31,11 @@ export function JobsOverlay() {
     return () => document.removeEventListener("keydown", onKey);
   }, [current, dismiss]);
 
-  return (
+  // Portaled to <body>: the app shell is `isolation: isolate`, so rendered in
+  // place this sat in the shell's stacking context and any body-level portal —
+  // the create sheet it now opens over — painted above it whatever its z-index.
+  // (Loaded with `ssr: false`, so `document` exists here.)
+  return createPortal(
     <AnimatePresence>
       {current && quote && (
         <motion.div
@@ -40,6 +45,10 @@ export function JobsOverlay() {
           exit={{ opacity: 0 }}
           transition={{ duration: reduce ? 0.15 : 0.5, ease: EASE_OUT }}
           onClick={dismiss}
+          // A create opens this over its still-open sheet, and a modal sheet sets
+          // `pointer-events: none` on <body>, which this portal would inherit —
+          // "tap anywhere to continue" would silently do nothing.
+          style={{ pointerEvents: "auto" }}
           className="fixed inset-0 z-[80] flex cursor-pointer items-center justify-center bg-black/40 backdrop-blur-3xl"
           role="dialog"
           aria-modal="true"
@@ -81,6 +90,7 @@ export function JobsOverlay() {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

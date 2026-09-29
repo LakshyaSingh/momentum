@@ -6,12 +6,14 @@ import { JobsQuoteBar } from "@/components/motivation/jobs-quote-bar";
 import { TimezoneSync } from "@/components/settings/timezone-sync";
 import { StatsPrefetch } from "@/components/nav/stats-prefetch";
 import { DeclarativeGlassSceneProvider } from "@/components/glass/declarative-glass-scene";
+import { PendingApplicationsProvider } from "@/components/applications/optimistic-applications";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   return (
     <div className="app-shell relative isolate min-h-svh bg-background dark:bg-black">
       <DeclarativeGlassSceneProvider>
+        <PendingApplicationsProvider timeZone={user.timezone}>
         <TimezoneSync timezone={user.timezone} />
         <StatsPrefetch />
         <AppBackground />
@@ -21,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
         <MotivationStage />
+        </PendingApplicationsProvider>
       </DeclarativeGlassSceneProvider>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { isoDateKey } from "@/lib/utils";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
+import { usePendingCount } from "@/components/applications/optimistic-applications";
 
 interface WeekSparklineProps {
   /** Last 7 days, oldest -> newest, with applicationCount per day */
@@ -17,9 +18,13 @@ function formatDayLabel(date: Date) {
   });
 }
 
-export function WeekSparkline({ series }: WeekSparklineProps) {
-  const max = Math.max(1, ...series.map((s) => s.count));
+export function WeekSparkline({ series: confirmed }: WeekSparklineProps) {
   const todayKey = isoDateKey(new Date());
+  const pendingToday = usePendingCount("today");
+  const series = pendingToday
+    ? confirmed.map((d) => (isoDateKey(d.date) === todayKey ? { ...d, count: d.count + pendingToday } : d))
+    : confirmed;
+  const max = Math.max(1, ...series.map((s) => s.count));
   // Self-managed hover state. We deliberately avoid the Radix hover Tooltip
   // here: in Safari its pointer detection on a transparent <button> wrapping a
   // framer-motion bar was unreliable (the tooltip flickered open/closed or
