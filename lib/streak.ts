@@ -117,7 +117,11 @@ export function weekSeriesFromDailyCounts(
   }));
 }
 
-function streakInfoFromDailyCounts(
+/**
+ * Everything here that depends on "today" is derived per call. Never cache the
+ * result: a copy computed before midnight keeps yesterday as today.
+ */
+export function streakInfoFromDailyCounts(
   dailyCounts: Record<string, number>,
   timeZone: string,
 ): StreakInfo {

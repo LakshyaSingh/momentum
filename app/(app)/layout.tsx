@@ -5,6 +5,7 @@ import { MotivationStage } from "@/components/motivation/motivation-stage";
 import { JobsQuoteBar } from "@/components/motivation/jobs-quote-bar";
 import { TimezoneSync } from "@/components/settings/timezone-sync";
 import { StatsPrefetch } from "@/components/nav/stats-prefetch";
+import { DayRollover } from "@/components/nav/day-rollover";
 import { DeclarativeGlassSceneProvider } from "@/components/glass/declarative-glass-scene";
 import { PendingApplicationsProvider } from "@/components/applications/optimistic-applications";
 
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <PendingApplicationsProvider timeZone={user.timezone}>
         <TimezoneSync timezone={user.timezone} />
         <StatsPrefetch />
+        <DayRollover timeZone={user.timezone} />
         <AppBackground />
         <FloatingNav user={user} />
         <JobsQuoteBar />
