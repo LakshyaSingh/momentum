@@ -30,7 +30,7 @@ import {
 /**
  * Shared, `userId`-parameterized application logic. The web Server Actions
  * (`app/actions/applications.ts`) and the MCP resource server
- * (`app/api/[transport]/route.ts`) both call these — the actions after a
+ * (`app/api/mcp/route.ts`) both call these — the actions after a
  * cookie-session `requireUser()`, the MCP route after bearer-token validation.
  * Keeping the logic here means validation and cache invalidation stay identical
  * across both entry points.

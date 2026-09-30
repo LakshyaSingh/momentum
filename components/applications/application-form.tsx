@@ -2,7 +2,7 @@
 
 import { startTransition, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApplicationStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -101,7 +101,10 @@ export function ApplicationForm({
     getValues,
     formState: { errors },
   } = useForm<ApplicationInput>({
-    resolver: zodResolver(ApplicationSchema),
+    // zod 4 types a coerced date's input as `unknown`, so the resolver's input
+    // type no longer matches the parsed shape the form works in. The fields
+    // always hold parsed values here, so type the resolver by its output.
+    resolver: zodResolver(ApplicationSchema) as Resolver<ApplicationInput>,
     defaultValues: {
       ...defaultValues,
       // RHF needs a string for date inputs

@@ -52,7 +52,9 @@ throughout.
 ## AI agent integration (MCP)
 
 Momentum ships a remote [Model Context Protocol](https://modelcontextprotocol.io) server, so any
-MCP-capable agent (Claude, Cursor, Codex) can operate the tracker on a user's behalf.
+MCP-capable agent (Claude, Cursor, Codex) can operate the tracker on a user's behalf. It speaks the
+current **2026-07-28** revision of the protocol natively and still serves clients on the 2025
+revisions from the same endpoint.
 
 The intended workflow is a three-way pipeline: **email tool → agent → Momentum**. The agent polls
 the inbox on whatever cadence its user chooses, and calls Momentum's tools to create applications,

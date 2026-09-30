@@ -2,19 +2,24 @@ import { z } from "zod";
 import { ApplicationStatus } from "@prisma/client";
 import { isAtsVendorDomain, isValidCompanyDomain, normalizeCompanyDomain } from "@/lib/company-logo";
 
+// Each optional field ends in `.optional()` again after its transform: in zod 4
+// a transform's output is a required key, so without it every blank field
+// would become a required `string | undefined` in the inferred type.
 const optionalString = (max = 500) =>
   z
     .string()
     .max(max)
     .optional()
-    .transform((v) => (v && v.length > 0 ? v : undefined));
+    .transform((v) => (v && v.length > 0 ? v : undefined))
+    .optional();
 
 const optionalUrl = z
   .string()
   .max(2048)
   .optional()
   .transform((v) => (v && v.length > 0 ? v : undefined))
-  .refine((v) => !v || /^https?:\/\//i.test(v), { message: "Must start with http(s)://" });
+  .refine((v) => !v || /^https?:\/\//i.test(v), { message: "Must start with http(s)://" })
+  .optional();
 
 /** A job-board URL with a path — a posting link, not a company's domain. */
 function isJobBoardLink(value: string): boolean {
@@ -40,7 +45,8 @@ const optionalCompanyDomain = z
     message: "That looks like a job link. Enter just the domain, like linkedin.com",
   })
   .transform((v) => (v === undefined ? undefined : normalizeCompanyDomain(v)))
-  .refine((v) => !v || isValidCompanyDomain(v), { message: "Enter a valid domain" });
+  .refine((v) => !v || isValidCompanyDomain(v), { message: "Enter a valid domain" })
+  .optional();
 
 export const ApplicationSchema = z.object({
   company: z.string().min(1, "Company is required").max(120),

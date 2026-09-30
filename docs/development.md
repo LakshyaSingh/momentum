@@ -85,11 +85,20 @@ npx tsx lib/<file>.test.ts  # run any single test file directly
 The MCP server needs Supabase's OAuth 2.1 server acting as its authorization server:
 
 1. Authentication → **OAuth Server**: enable it, and enable **Dynamic Client Registration** so MCP
-   clients can register themselves. Both are free during the beta.
+   clients can register themselves. Both are free during the beta. The 2026-07-28 MCP spec deprecates
+   DCR in favor of Client ID Metadata Documents, but CIMD is something the authorization server
+   advertises, and Supabase does not yet; clients fall back to DCR, which keeps working.
 2. Set the **Authorization Path** to `/oauth/authorize`, which is the consent screen this app serves.
    Supabase redirects users there to approve each agent.
 3. No extra env vars are required. The RFC 8707 resource identifier is derived from
    `NEXT_PUBLIC_SITE_URL`, so that must match the deployed origin.
+
+### Protocol support
+
+The endpoint speaks MCP **2026-07-28** natively (stateless, `server/discover`, per-request `_meta`
+envelope) through `mcp-handler` 2.x on the v2 SDK (`@modelcontextprotocol/server`). Clients on the
+2025 revisions (`2025-11-25` back to `2024-11-05` via Streamable HTTP) are served from the same
+handler by the SDK's stateless fallback. The old HTTP+SSE transport is not supported.
 
 ### Connecting a client
 

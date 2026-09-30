@@ -1,5 +1,5 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { AuthInfo } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { ApplicationStatus } from "@prisma/client";
 import { verifyAccessToken } from "@/lib/supabase/verify-token";
@@ -20,6 +20,7 @@ import { parseJobLink } from "@/lib/job-link/extract-fields";
 import { assertSafeJobUrl } from "@/lib/job-link/is-safe-url";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const STATUS_VALUES = Object.values(ApplicationStatus) as [
   ApplicationStatus,
@@ -40,8 +41,8 @@ const fail = (message: string): ToolResult => ({
 });
 
 /** Pull the token-scoped user out of the request auth info. */
-function authedUser(extra: { authInfo?: AuthInfo }) {
-  const info = extra.authInfo?.extra as
+function authedUser(ctx: { http?: { authInfo?: AuthInfo } }) {
+  const info = ctx.http?.authInfo?.extra as
     | { userId?: string; timezone?: string }
     | undefined;
   if (!info?.userId) return null;
@@ -68,6 +69,12 @@ function buildQuery(input: {
   };
 }
 
+// Tool annotations are hints for clients deciding what to confirm with the
+// user. Every tool touches only the caller's own tracker, so none is open-world
+// except parse_job_link, which fetches a public URL.
+const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
+const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
+
 const handler = createMcpHandler(
   (server) => {
     server.registerTool(
@@ -76,7 +83,7 @@ const handler = createMcpHandler(
         title: "Create application",
         description:
           "Add a job application to the tracker. Use this when an email confirms a new application was submitted (e.g. a 'thanks for applying' message). applicationDate defaults to today if omitted.",
-        inputSchema: {
+        inputSchema: z.object({
           company: z.string().min(1).describe("Company name"),
           role: z.string().min(1).describe("Job title / role"),
           status: z
@@ -100,10 +107,11 @@ const handler = createMcpHandler(
           interviewStage: z.string().optional(),
           offerStatus: z.string().optional(),
           followUpDate: z.string().optional().describe("ISO date"),
-        },
+        }),
+        annotations: { ...WRITE, idempotentHint: false },
       },
-      async (input, extra) => {
-        const auth = authedUser(extra);
+      async (input, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const result = await createApplicationForUser(
           auth.userId,
@@ -145,14 +153,15 @@ const handler = createMcpHandler(
         title: "Find applications",
         description:
           "Search applications by free text (company, role, location, notes, recruiter) and/or status. Returns matching rows WITH their ids — use this to locate an application before updating its status.",
-        inputSchema: {
+        inputSchema: z.object({
           query: z.string().optional().describe("Free-text search"),
           statuses: z.array(z.enum(STATUS_VALUES)).optional(),
           limit: z.number().int().min(1).max(200).optional(),
-        },
+        }),
+        annotations: READ_ONLY,
       },
-      async (input, extra) => {
-        const auth = authedUser(extra);
+      async (input, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const result = await listApplicationsForUser(
           auth.userId,
@@ -172,7 +181,7 @@ const handler = createMcpHandler(
         title: "List applications",
         description:
           "Paginated, sortable list of the user's applications with optional text/status filters.",
-        inputSchema: {
+        inputSchema: z.object({
           page: z.number().int().min(1).optional(),
           pageSize: z.number().int().min(1).max(200).optional(),
           query: z.string().optional(),
@@ -181,10 +190,11 @@ const handler = createMcpHandler(
             .enum(["applicationDate", "company", "role", "status"])
             .optional(),
           dir: z.enum(["asc", "desc"]).optional(),
-        },
+        }),
+        annotations: READ_ONLY,
       },
-      async (input, extra) => {
-        const auth = authedUser(extra);
+      async (input, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const result = await listApplicationsForUser(
           auth.userId,
@@ -200,10 +210,11 @@ const handler = createMcpHandler(
         title: "Get application",
         description:
           "Fetch a single application by id, including its full status timeline.",
-        inputSchema: { id: z.string().min(1) },
+        inputSchema: z.object({ id: z.string().min(1) }),
+        annotations: READ_ONLY,
       },
-      async ({ id }, extra) => {
-        const auth = authedUser(extra);
+      async ({ id }, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const app = await getApplicationForUser(auth.userId, id);
         if (!app) return fail("Not found");
@@ -217,13 +228,14 @@ const handler = createMcpHandler(
         title: "Update application status",
         description:
           "Transition an application to a new status (writes a timeline event). Use this when an email changes the outcome — e.g. a rejection ('we've moved forward with other candidates') sets status to REJECTED.",
-        inputSchema: {
+        inputSchema: z.object({
           id: z.string().min(1),
           status: z.enum(STATUS_VALUES),
-        },
+        }),
+        annotations: { ...WRITE, idempotentHint: false },
       },
-      async ({ id, status }, extra) => {
-        const auth = authedUser(extra);
+      async ({ id, status }, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const result = await transitionStatusForUser(auth.userId, id, status);
         if (!result.ok) return fail(result.error);
@@ -237,7 +249,7 @@ const handler = createMcpHandler(
         title: "Update application",
         description:
           "Update one or more fields of an existing application. Only provided fields change. Changing `status` also records a timeline event.",
-        inputSchema: {
+        inputSchema: z.object({
           id: z.string().min(1),
           company: z.string().optional(),
           role: z.string().optional(),
@@ -253,10 +265,11 @@ const handler = createMcpHandler(
           interviewStage: z.string().optional(),
           offerStatus: z.string().optional(),
           followUpDate: z.string().optional(),
-        },
+        }),
+        annotations: { ...WRITE, idempotentHint: false },
       },
-      async (input, extra) => {
-        const auth = authedUser(extra);
+      async (input, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const { id, applicationDate, followUpDate, ...rest } = input;
         const result = await updateApplicationForUser(auth.userId, {
@@ -277,10 +290,16 @@ const handler = createMcpHandler(
       {
         title: "Delete application",
         description: "Permanently delete an application by id.",
-        inputSchema: { id: z.string().min(1) },
+        inputSchema: z.object({ id: z.string().min(1) }),
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
-      async ({ id }, extra) => {
-        const auth = authedUser(extra);
+      async ({ id }, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         await deleteApplicationForUser(auth.userId, id);
         return json({ ok: true, id });
@@ -293,10 +312,11 @@ const handler = createMcpHandler(
         title: "Get job-search summary",
         description:
           "Return an aggregate snapshot of the user's job search: totals, current/longest streak, per-status counts, the applied→offer funnel, productivity stats (best day, avg/week, response & interview rates), and top companies. Use this to answer natural-language questions about how the search is going.",
-        inputSchema: {},
+        inputSchema: z.object({}),
+        annotations: READ_ONLY,
       },
-      async (_input, extra) => {
-        const auth = authedUser(extra);
+      async (_input, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         const summary = await getSearchSummaryForUser(
           auth.userId,
@@ -312,10 +332,11 @@ const handler = createMcpHandler(
         title: "Parse job link",
         description:
           "Extract structured fields (company, role, location, salary, source) from a public job posting URL. Use before create_application to prefill details. Does not save anything.",
-        inputSchema: { url: z.string().min(1).max(2048) },
+        inputSchema: z.object({ url: z.string().min(1).max(2048) }),
+        annotations: { readOnlyHint: true, openWorldHint: true },
       },
-      async ({ url }, extra) => {
-        const auth = authedUser(extra);
+      async ({ url }, ctx) => {
+        const auth = authedUser(ctx);
         if (!auth) return fail("Unauthorized");
         try {
           assertSafeJobUrl(url);
@@ -333,12 +354,9 @@ const handler = createMcpHandler(
     );
   },
   {
-    serverInfo: { name: "momentum", version: "1.0.0" },
-  },
-  {
-    basePath: "/api",
-    disableSse: true,
-    maxDuration: 60,
+    serverInfo: { name: "momentum", version: "2.0.0" },
+    instructions:
+      "Momentum is the user's job application tracker. Use find_applications to get an id before updating or deleting. Use get_search_summary for questions about progress, streaks or response rates.",
   },
 );
 
@@ -356,8 +374,10 @@ const authHandler = withMcpAuth(handler, async (_req, bearerToken) => {
   required: true,
   // withMcpAuth builds the advertised metadata URL as `${origin}${path}`, so the
   // path must resolve against the request origin (→ /.well-known/oauth-protected-resource,
-  // where the route below is served). Origin is auto-detected from proxy headers.
+  // where that route is served). Origin is auto-detected from proxy headers.
   resourceMetadataPath: "/.well-known/oauth-protected-resource",
 });
 
-export { authHandler as GET, authHandler as POST };
+// The 2026-07-28 spec is stateless; 2025-era clients are served by the SDK's
+// stateless fallback, which answers GET/DELETE session calls with 405.
+export { authHandler as GET, authHandler as POST, authHandler as DELETE };

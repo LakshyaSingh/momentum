@@ -23,7 +23,7 @@ export const env = {
 /**
  * Canonical MCP resource identifier (RFC 8707 / RFC 9728). No trailing slash.
  * MCP clients bind access tokens to this URI and it is validated on the resource
- * server. Matches the endpoint served by `app/api/[transport]/route.ts`.
+ * server. Matches the endpoint served by `app/api/mcp/route.ts`.
  */
 export const mcpResourceUrl = `${env.siteUrl.replace(/\/$/, "")}/api/mcp`;
 
