@@ -12,7 +12,7 @@ import {
   resolveCompanyDomain,
   resolveCompanyDomainCandidates,
 } from "@/lib/company-logo";
-import { ApplicationSchema } from "@/lib/validators";
+import { ApplicationSchema, ApplicationUpdateSchema } from "@/lib/validators";
 
 assert.equal(domainFromJobLink("https://www.tesla.com/careers/search/job/266962"), "tesla.com");
 assert.equal(
@@ -190,5 +190,21 @@ assert.equal(
   companyLogoApiUrl({ company: "LinkedIn", companyDomain: "linkedin.com" }),
   "/api/company-logo?company=LinkedIn&verifiedDomain=1&domain=linkedin.com",
 );
+
+// A partial update must leave untouched fields untouched — in particular it
+// must not fill in `status` from the create schema's default.
+assert.deepEqual(ApplicationUpdateSchema.parse({ id: "a1", location: "Remote" }), {
+  id: "a1",
+  location: "Remote",
+});
+assert.equal(ApplicationSchema.parse({ company: "A", role: "B", applicationDate: new Date() }).status, "APPLIED");
+
+// Missing required fields read as a person would say it, not as a type error.
+{
+  const missing = ApplicationSchema.safeParse({ applicationDate: new Date() });
+  assert.equal(missing.success, false);
+  const messages = missing.success ? [] : missing.error.issues.map((i) => i.message);
+  assert.deepEqual(messages.sort(), ["Company is required", "Role is required"]);
+}
 
 console.log("company-logo tests passed");

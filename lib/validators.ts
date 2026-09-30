@@ -48,10 +48,13 @@ const optionalCompanyDomain = z
   .refine((v) => !v || isValidCompanyDomain(v), { message: "Enter a valid domain" })
   .optional();
 
+// Required strings name their own message for the missing case too: an
+// untouched field is `undefined`, and zod 4's built-in wording for that is
+// "Invalid input: expected string, received undefined".
 export const ApplicationSchema = z.object({
-  company: z.string().min(1, "Company is required").max(120),
+  company: z.string({ error: "Company is required" }).min(1, "Company is required").max(120),
   companyDomain: optionalCompanyDomain,
-  role: z.string().min(1, "Role is required").max(160),
+  role: z.string({ error: "Role is required" }).min(1, "Role is required").max(160),
   location: optionalString(120),
   jobLink: optionalUrl,
   applicationDate: z.coerce.date({ message: "Pick a date" }),
@@ -67,8 +70,12 @@ export const ApplicationSchema = z.object({
 
 export type ApplicationInput = z.infer<typeof ApplicationSchema>;
 
+// `status` is redeclared without its default. In zod 4 a default still fills in
+// a missing key even under `.partial()`, so an update that only touched, say,
+// the location would reset the status to APPLIED and log a bogus status event.
 export const ApplicationUpdateSchema = ApplicationSchema.partial().extend({
   id: z.string().min(1),
+  status: z.nativeEnum(ApplicationStatus).optional(),
 });
 export type ApplicationUpdate = z.infer<typeof ApplicationUpdateSchema>;
 
